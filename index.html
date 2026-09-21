@@ -152,6 +152,7 @@ tfoot td{font-weight:500;border-top:2px solid var(--line-2);border-bottom:0}
 .court .mk.h{fill:var(--home)} .court .mk.a{fill:var(--away)}
 .court .ms line{stroke-width:3;stroke-linecap:round}
 .court .ms.h line{stroke:var(--home)} .court .ms.a line{stroke:var(--away)}
+.jno{font-size:12px;color:var(--ink-2);font-weight:400;margin-right:5px}
 .typetag{font-size:11px;opacity:.7}
 .srow{display:grid;grid-template-columns:1fr 92px 44px;gap:8px;align-items:center;margin-bottom:8px}
 @media print{.noprint{display:none !important}body{background:#fff;font-size:12px}.wrap{max-width:none;padding:0}.card{border:0;padding:0}}
@@ -176,7 +177,24 @@ var S = null;
 var UI = { tab:"session", team:0, sel:null, editStats:false, setup:null, drill:null, card:null, minus:false,
            shot:null, entry:null, shotFilter:"all" };
 
-function uid(p){ return (p||"x") + Math.random().toString(36).slice(2,8) + Date.now().toString(36).slice(-3); }
+/* IDs are random UUID v4: generated once, stored, never recomputed.
+   `p` is kept for call-site readability; older short IDs keep working
+   because the app treats every ID as opaque text.                       */
+function uid(p){
+  var c = (typeof crypto !== "undefined") ? crypto : null;
+  if(c && typeof c.randomUUID === "function") return c.randomUUID();
+  if(c && typeof c.getRandomValues === "function"){
+    var b = new Uint8Array(16); c.getRandomValues(b);
+    b[6] = (b[6] & 0x0f) | 0x40;   // version 4
+    b[8] = (b[8] & 0x3f) | 0x80;   // RFC 4122 variant
+    var h = Array.prototype.map.call(b, function(x){ return (x + 0x100).toString(16).slice(1); }).join("");
+    return h.slice(0,8) + "-" + h.slice(8,12) + "-" + h.slice(12,16) + "-" + h.slice(16,20) + "-" + h.slice(20);
+  }
+  // no crypto at all (very old browsers): still unique in practice, just not cryptographic
+  return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, function(ch){
+    var r = Math.random() * 16 | 0; return (ch === "x" ? r : (r & 0x3 | 0x8)).toString(16);
+  });
+}
 
 /* ---------- stat catalog ----------
    kind: count   -> tally of occurrences (points, rebounds)
@@ -353,6 +371,8 @@ function player(pid){
   return null;
 }
 function pname(pid){ var p = player(pid); return p ? p.name : "?"; }
+function jersey(p){ var n = p && p.num != null ? String(p.num).trim() : ""; return n ? "#" + n.replace(/^#/, "") : ""; }
+function benchName(p){ var j = jersey(p); return (j ? j + " " : "") + (p ? p.name : "?"); }
 function sessionPlayerIds(sess){
   if(sess.kind === "practice") return sess.playerIds || [];
   var out = [];
@@ -700,7 +720,8 @@ function viewGame(v, sess){
       "aria-pressed": UI.sel===pid ? "true":"false",
       on:{click:function(){ UI.sel = (UI.sel===pid ? null : pid); UI.entry = null; render(); }}});
     b.appendChild(el("span",{cls:"jn",text:p ? p.name : "?"}));
-    if(p && p.desc) b.appendChild(el("span",{cls:"nm",text:p.desc}));
+    var subline = [jersey(p), p && p.desc].filter(Boolean).join(" · ");
+    if(subline) b.appendChild(el("span",{cls:"nm",text:subline}));
     b.appendChild(el("span",{cls:"ln num",
       text: pointsOf(m) + " · " + shown.map(function(s){ return cellText(s, m[s.key]); }).join(" · ")}));
     grid.appendChild(b);
@@ -775,7 +796,10 @@ function viewTapGrid(v, sess, tot){
     var p = player(pid), m = tot[pid] || {n:0, miss:{}};
     var tr = el("tr");
     var nm = el("td",{cls:"nmcell"});
-    nm.appendChild(el("b",{text: p ? p.name : "?"}));
+    var nb = el("b");
+    if(jersey(p)) nb.appendChild(el("span",{cls:"jno num",text:jersey(p)}));
+    nb.appendChild(document.createTextNode(p ? p.name : "?"));
+    nm.appendChild(nb);
     if(p && p.desc) nm.appendChild(el("small",{text:p.desc}));
     tr.appendChild(nm);
     tr.appendChild(el("td",{cls:"ptscell num",text:String(pointsOf(m))}));
@@ -1157,7 +1181,7 @@ function pickerFor(list, other){
           draw();
         }}});
       b.appendChild(el("span",{cls:"ck",text: on ? "✓" : "+"}));
-      b.appendChild(document.createTextNode(p.name));
+      b.appendChild(document.createTextNode(benchName(p)));
       wrap.appendChild(b);
     });
   }
@@ -1371,9 +1395,9 @@ function viewPlayers(v){
         var f = inp.files[0]; if(!f) return;
         var r = new FileReader();
         r.onload = function(){
-          var n = importPlayersCSV(r.result);
+          var n = importPlayersCSV(r.result), u = importPlayersCSV.updated || 0;
           save(); render();
-          toast(n + " player" + (n===1?"":"s") + " imported");
+          toast(n + " player" + (n===1?"":"s") + " imported" + (u ? " · details filled in for " + u : ""));
         };
         r.readAsText(f);
       };
@@ -1387,17 +1411,18 @@ function viewPlayers(v){
   
   var form = el("div",{cls:"card"});
   var nm = el("input",{type:"text",placeholder:"Name",id:"newName"});
+  var jn = el("input",{type:"text",inputmode:"numeric",placeholder:"Jersey number (optional)",id:"newNum"});
   var ds = el("input",{type:"text",placeholder:"Descriptor (optional) — e.g. tall jersey"});
   var al = el("input",{type:"text",placeholder:"Aliases, comma separated (optional)"});
   form.appendChild(el("label",{cls:"f",text:"Add a player"}));
-  [nm,ds,al].forEach(function(x){ form.appendChild(x); form.appendChild(el("div",{style:"height:8px"})); });
+  [nm,jn,ds,al].forEach(function(x){ form.appendChild(x); form.appendChild(el("div",{style:"height:8px"})); });
   form.appendChild(el("button",{cls:"btn solid wide",text:"Add player",on:{click:function(){
     var name = nm.value.trim();
     if(!name){ toast("Name required"); return; }
     S.players.push({ id:uid("p"), name:name, desc:ds.value.trim(),
       aliases: al.value.split(",").map(function(s){ return s.trim(); }).filter(Boolean),
-      num:"", notes:"", active:true });
-    nm.value = ds.value = al.value = "";
+      num: jn.value.trim().replace(/^#/, ""), notes:"", active:true });
+    nm.value = jn.value = ds.value = al.value = "";
     save(); render(); toast(name + " added");
   }}}));
   v.appendChild(form);
@@ -1407,6 +1432,8 @@ function viewPlayers(v){
     var card = el("div",{cls:"card"});
     var nmi = el("input",{type:"text",value:p.name});
     nmi.addEventListener("input", function(){ p.name = nmi.value; save(); });
+    var jni = el("input",{type:"text",inputmode:"numeric",value:p.num||"",placeholder:"Jersey number"});
+    jni.addEventListener("input", function(){ p.num = jni.value.trim().replace(/^#/, ""); save(); });
     var dsi = el("input",{type:"text",value:p.desc||"",placeholder:"Descriptor"});
     dsi.addEventListener("input", function(){ p.desc = dsi.value; save(); });
     var ali = el("input",{type:"text",value:(p.aliases||[]).join(", "),placeholder:"Aliases"});
@@ -1415,7 +1442,7 @@ function viewPlayers(v){
     var nti = el("textarea",{placeholder:"Notes"});
     nti.value = p.notes || "";
     nti.addEventListener("input", function(){ p.notes = nti.value; save(); });
-    [nmi,dsi,ali,nti].forEach(function(x){ card.appendChild(x); card.appendChild(el("div",{style:"height:8px"})); });
+    [nmi,jni,dsi,ali,nti].forEach(function(x){ card.appendChild(x); card.appendChild(el("div",{style:"height:8px"})); });
     card.appendChild(el("div",{cls:"btns",style:"margin:2px 0 0"},[
       el("button",{cls:"btn sm",text:"Report card",on:{click:function(){
         UI.card = p.id; UI.tab = "card"; render(); }}}),
@@ -1742,11 +1769,20 @@ function statsCSV(){
   return rows.map(toCSVLine).join("\n");
 }
 function playersCSV(){
-  var rows = [["id","name","desc","aliases","notes"]];
-  S.players.forEach(p => {
-    rows.push([p.id, p.name, p.desc||"", (p.aliases||[]).join("; "), p.notes||""]);
+  var rows = [["id","name","jersey number","desc","aliases","notes"]];
+  S.players.forEach(function(p){
+    rows.push([p.id, p.name, p.num || "", p.desc || "", (p.aliases || []).join("; "), p.notes || ""]);
   });
-  return rows.map(r => toCSVLine(r)).join("\n");
+  return rows.map(toCSVLine).join("\n");
+}
+// accept the jersey column under the names people actually use in a sheet
+function jerseyFrom(row){
+  var keys = Object.keys(row);
+  for(var i = 0; i < keys.length; i++){
+    var k = keys[i].toLowerCase().replace(/[\s_]+/g, " ").trim();
+    if(/^(jersey( number| no\.?| #)?|number|num|no\.?|#)$/.test(k)) return String(row[keys[i]] || "").trim().replace(/^#/, "");
+  }
+  return "";
 }
 function sessionsCSV(){
   var rows = [["id","date","kind","format","title","team1_name","team1_players","team2_name","team2_players",
@@ -1800,16 +1836,28 @@ function importStatsCSV(text){
   return added;
 }
 function importPlayersCSV(text){
-  var added = 0;
+  var added = 0, updated = 0;
   parseCSV(text).forEach(function(row){
-    if(!row.id || S.players.some(function(p){ return p.id === row.id; })) return;
-    S.players.push({
-      id: row.id, name: row.name || "Unnamed", desc: row.desc || "",
-      aliases: (row.aliases || "").split(";").map(function(a){ return a.trim(); }).filter(Boolean),
-      num: "", notes: row.notes || "", active: true
-    });
+    if(!row.id) return;
+    var aliases = (row.aliases || "").split(/[;,]/).map(function(a){ return a.trim(); }).filter(Boolean);
+    var num = jerseyFrom(row);
+    var have = null;
+    for(var i = 0; i < S.players.length; i++){ if(S.players[i].id === row.id){ have = S.players[i]; break; } }
+    if(have){
+      // fill blanks only: the CSV never overwrites something entered in the app
+      var changed = false;
+      if(!have.num && num){ have.num = num; changed = true; }
+      if(!have.desc && row.desc){ have.desc = row.desc; changed = true; }
+      if(!have.notes && row.notes){ have.notes = row.notes; changed = true; }
+      if(!(have.aliases && have.aliases.length) && aliases.length){ have.aliases = aliases; changed = true; }
+      if(changed) updated++;
+      return;
+    }
+    S.players.push({ id: row.id, name: row.name || "Unnamed", desc: row.desc || "",
+      aliases: aliases, num: num, notes: row.notes || "", active: true });
     added++;
   });
+  importPlayersCSV.updated = updated;
   return added;
 }
 function importSessionsCSV(text){
@@ -1867,7 +1915,8 @@ function importFromCSVs(playerText, sessionText, eventText, statText){
   S.sessions.sort(function(a, b){ return b.date - a.date; });
   if(!S.activeId && S.sessions.length) S.activeId = S.sessions[0].id;
   save();
-  return { stats: st, players: p, sessions: s, events: e, orphans: importEventsCSV.orphans || 0 };
+  return { stats: st, players: p, updated: importPlayersCSV.updated || 0,
+           sessions: s, events: e, orphans: importEventsCSV.orphans || 0 };
 }
 function csvKind(text){
   var h = (parseCSVRows(text)[0] || []).map(function(x){ return x.trim(); });
@@ -1892,7 +1941,8 @@ function importCSVFiles(){
       var r = importFromCSVs(texts.players, texts.sessions, texts.events, texts.stats);
       render();
       var msg = "Added " + r.players + " players, " + r.sessions + " sessions, " + r.events + " entries" +
-                (r.stats ? ", " + r.stats + " stats" : "");
+                (r.stats ? ", " + r.stats + " stats" : "") +
+                (r.updated ? " · filled in details for " + r.updated + " existing players" : "");
       if(r.orphans) msg += " · " + r.orphans + " entries skipped — include sessions.csv";
       if(unknown.length) msg += " · ignored " + unknown.join(", ");
       toast(msg);
