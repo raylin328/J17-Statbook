@@ -1,0 +1,12 @@
+{
+  "name": "j17-statbook-tests",
+  "version": "4.6.0",
+  "private": true,
+  "description": "Tests for the J17 Stat Book. Runs against ../latest/index.html unless STATBOOK points elsewhere.",
+  "scripts": {
+    "test": "node test-regress.js && node test-grid.js && node test-csv.js && node test-custom-stats.js && node test-v41.js && node test-v42.js && node test-v43.js && node test-v44.js && node test-v45.js && node test-v46.js && node sample-data-test.js"
+  },
+  "dependencies": {
+    "jsdom": "^22.0.0"
+  }
+}
