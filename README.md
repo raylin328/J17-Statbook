@@ -5,9 +5,9 @@ A self-contained, offline-first web app for tracking player performance in pract
 ## Quick Start
 
 Open one of these links on your iPad:
-- **Latest (recommended):** https://raylin328.github.io/J17-Statbook/latest/ (currently v4.9)
-- **v4.9:** https://raylin328.github.io/J17-Statbook/v4.9/
-- Older versions, for reference: [v4.8](https://raylin328.github.io/J17-Statbook/v4.8/) · [v4.7.1](https://raylin328.github.io/J17-Statbook/v4.7.1/) · [v4.7](https://raylin328.github.io/J17-Statbook/v4.7/) · [v4.6](https://raylin328.github.io/J17-Statbook/v4.6/) · [v4.5](https://raylin328.github.io/J17-Statbook/v4.5/) · [v4.4](https://raylin328.github.io/J17-Statbook/v4.4/) · [v4.3](https://raylin328.github.io/J17-Statbook/v4.3/)
+- **Latest (recommended):** https://raylin328.github.io/J17-Statbook/latest/ (currently v4.10)
+- **v4.10:** https://raylin328.github.io/J17-Statbook/v4.10/
+- Older versions, for reference: [v4.9](https://raylin328.github.io/J17-Statbook/v4.9/) · [v4.8](https://raylin328.github.io/J17-Statbook/v4.8/) · [v4.7.1](https://raylin328.github.io/J17-Statbook/v4.7.1/) · [v4.7](https://raylin328.github.io/J17-Statbook/v4.7/) · [v4.6](https://raylin328.github.io/J17-Statbook/v4.6/) · [v4.5](https://raylin328.github.io/J17-Statbook/v4.5/) · [v4.4](https://raylin328.github.io/J17-Statbook/v4.4/) · [v4.3](https://raylin328.github.io/J17-Statbook/v4.3/)
 
 Everything works offline. Data saves to your device automatically, and every
 version on this site shares the same saved data on that device.
@@ -30,12 +30,15 @@ version on this site shares the same saved data on that device.
 - Shot chart with coordinates
 - Game clock with period tracking
 - Substitutions: any number on the court, minutes played and plus/minus
+- Opponent teams: their players by jersey number, the same id in every game
+- Team rows for plays nobody caught the number for
 
 ### Players
 - Categories: U12–U18 Rep and House League, or your own, such as Team 1
 - One tap adds a whole category to a session
 - Roster import from Google Sheets, with columns in any order
 - UUID-based player IDs for consistency
+- Add players mid-session from your roster, and edit them without leaving the game
 
 ### Data Management
 - Export to CSV (players, sessions, stats, events, drills, attempts)
@@ -45,7 +48,13 @@ version on this site shares the same saved data on that device.
 
 ## Versions
 
-### v4.9 (Current)
+### v4.10 (Current)
+- Opponent teams and players with permanent ids, kept apart from your roster
+- New player wearing an old number; merge two entries that are the same kid
+- Team rows
+- Add players mid-session from your roster; quick edit
+
+### v4.9
 - Substitutions, minutes played (from the game clock) and plus/minus
 - Version shown in the header and tab title
 - Clear all players, at the top of the Players tab
@@ -109,14 +118,16 @@ version on this site shares the same saved data on that device.
 6. When done, finish the session
 
 ### Recording Games
-1. On **Sessions**, choose **Game**, set the format, and pick each team's players
-   (tap a category to add everyone in it)
-2. Tap the grid (or use **Tiles**) to record points, rebounds, assists, steals, turnovers and fouls
-3. Tap **Set lineup** under the team tabs, then **Subs** whenever players change (any number can be on)
-4. Run the game clock if you want minutes played; plus/minus works either way
-5. Turn on **Chart shots** to place makes and misses on the court
-6. Possessions and points per possession appear under each score and on the **Box score** tab
-7. When finished, tap **Finish**
+1. On **Sessions**, choose **Game** and set the format. For each side, choose **J17 players**
+   (pick them, or tap a category to add everyone in it) or **Opponent team** (pick or name one)
+2. On an opponent side, type each player's jersey number and tap **Add**. Players from
+   earlier games show as one-tap chips
+3. Tap the grid (or use **Tiles**) to record points, rebounds, assists, steals, turnovers and fouls
+4. Tap **Set lineup** under the team tabs, then **Subs** whenever players change (any number can be on)
+5. Run the game clock if you want minutes played; plus/minus works either way
+6. Turn on **Chart shots** to place makes and misses on the court
+7. Possessions and points per possession appear under each score and on the **Box score** tab
+8. When finished, tap **Finish**
 
 For accurate possessions: tap both teams' rebounds; on a steal, tap STL (and TO
 for the player who lost the ball, if you like; it still counts once); on an
@@ -147,6 +158,7 @@ All data is stored in your browser's local storage (`j17.statbook.v2`).
 
 **Current data structure:**
 - Players: UUID, name, jersey number, category, aliases, description
+- Opponent teams and opponents: UUIDs, team, jersey number, optional name; kept apart from the roster
 - Categories: U12–U18 Rep and House League, plus your own; Miscellaneous is the default
 - Sessions: practice or game, date, players, and every stat entry (player, stat, value, timestamp)
 - Drills and attempts: which players ran a drill together, and their time or times
@@ -154,7 +166,7 @@ All data is stored in your browser's local storage (`j17.statbook.v2`).
 
 ## Testing
 
-The test suite is in `tests/` (665 checks in 14 files):
+The test suite is in `tests/` (747 checks in 15 files):
 ```bash
 cd tests
 npm install
@@ -233,5 +245,5 @@ For questions or feedback, open an issue on GitHub.
 ---
 
 **Versions stored in:**
-- `/v4.3/` through `/v4.9/`: each version, frozen
+- `/v4.3/` through `/v4.10/`: each version, frozen
 - `/latest/`: always the current version

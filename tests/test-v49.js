@@ -47,9 +47,9 @@ function boxRows(w, k) {
 // ---- the version on screen --------------------------------------------------------
 (function() {
   var w = newApp(); w.render();
-  eq("version", w.APP_VERSION, "4.9");
-  ok("tab title shows it", /J17 Stat Book 4\.9/.test(w.document.title), w.document.title);
-  eq("header shows it", (w.document.querySelector(".board-title .ver") || {}).textContent, "4.9");
+  ok("version is set", /^4\.\d+/.test(w.APP_VERSION), w.APP_VERSION);
+  ok("tab title shows it", w.document.title === "J17 Stat Book " + w.APP_VERSION, w.document.title);
+  eq("header shows it", (w.document.querySelector(".board-title .ver") || {}).textContent, w.APP_VERSION);
 })();
 
 // ---- "Clear all players" ------------------------------------------------------------
