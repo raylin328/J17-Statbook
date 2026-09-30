@@ -153,6 +153,49 @@ function boxRows(w, k) {
   eq("shown as a dash, not 0:00", boxRows(w2, 0).row["Home 0"]("MIN"), "\u2014");
 })();
 
+// ---- paused clock: subs while stopped, and a clock that never ran ---------------------
+(function() {
+  // the clock runs 8:00 -> 5:00, is paused, a sub is made while it's stopped,
+  // then it runs again to 2:00; only running time counts
+  var w = newApp(), s = game(w, 6);
+  s.clock = { len: 480000, left: 480000, since: null, ran: true };
+  w.setOnCourt(s, 0, ["h0", "h1", "h2", "h3", "h4"]);
+  s.clock.left = 300000;                                   // paused at 5:00
+  ok("clock is stopped", !s.clock.since);
+  w.setOnCourt(s, 0, ["h0", "h1", "h2", "h3", "h5"]);      // sub made during the pause
+  eq("the sub is stamped at the paused time", w.lineupsFor(s, 0).slice(-1)[0].clk, 300000);
+  s.clock.left = 120000;                                   // ran again to 2:00
+  var sec = w.secondsOnCourt(s, 0);
+  eq("subbed out at the pause: 3:00", sec.h4, 180);
+  eq("subbed in at the pause: 3:00", sec.h5, 180);
+  eq("on throughout: 6:00", sec.h0, 360);
+
+  // several subs during one pause take no time from anyone
+  var w2 = newApp(), s2 = game(w2, 6);
+  s2.clock = { len: 480000, left: 480000, since: null, ran: true };
+  w2.setOnCourt(s2, 0, ["h0", "h1"]);
+  s2.clock.left = 400000;
+  w2.setOnCourt(s2, 0, ["h0", "h2"]); w2.setOnCourt(s2, 0, ["h0", "h3"]); w2.setOnCourt(s2, 0, ["h0", "h1"]);
+  s2.clock.left = 360000;
+  var sec2 = w2.secondsOnCourt(s2, 0);
+  eq("back on after a paused mix-up: 1:20 + 0:40", sec2.h1, 120);
+  ok("on and off during the pause: no time", !sec2.h2 && !sec2.h3);
+
+  // the clock never runs: no minutes, but plus/minus still counts
+  var w3 = newApp(), s3 = game(w3, 5);
+  s3.lineups = [{ id: "l1", t: 10, team: 0, on: ["h0", "h1"], period: "Q1", clk: 480000 }];
+  s3.events.push({ id: "e1", t: 20, sid: s3.id, pid: "h0", key: "3P", v: 1, period: "Q1", team: 0 });
+  s3.events.push({ id: "e2", t: 30, sid: s3.id, pid: "a1", key: "2P", v: 1, period: "Q1", team: 1 });
+  s3.events.push({ id: "e3", t: 40, sid: s3.id, pid: "h1", key: "2P", v: 1, period: "Q1", team: 0 });
+  eq("never ran: minutes unknown", w3.secondsOnCourt(s3, 0), null);
+  var pm = w3.plusMinus(s3, 0);
+  eq("never ran: +/- still counts (+3 -2 +2)", pm.h0, 3);
+  eq("bench player unaffected", pm.h2, 0);
+  w3.UI.tab = "box"; w3.render();
+  var b = boxRows(w3, 0);
+  eq("box: dash for MIN, number for +/-", b.row["Home 0"]("MIN") + " " + b.row["Home 0"]("+/-"), "\u2014 +3");
+})();
+
 // ---- plus/minus --------------------------------------------------------------------------
 (function() {
   var w = newApp(), s = game(w, 6);
