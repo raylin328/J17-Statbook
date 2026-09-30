@@ -1,0 +1,1436 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#16181C">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>J17 Stat Book</title>
+<style>
+:root{
+  --page:#FAF9F6; --card:#FFFFFF; --ink:#14171A; --ink-2:#5B6169; --ink-3:#8B9198;
+  --line:#E2DFD8; --line-2:#CBC7BE; --board:#16181C; --lamp:#FFB300;
+  --home:#17505C; --home-soft:#E4EEF0; --away:#7A2E3B; --away-soft:#F3E5E8;
+  --prac:#4A3B6B; --prac-soft:#EBE6F2; --bad:#A32D2D; --tap:56px;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;padding:0}
+body{background:var(--page);color:var(--ink);
+  font-family:ui-sans-serif,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  font-size:16px;line-height:1.45;-webkit-text-size-adjust:100%;padding-bottom:env(safe-area-inset-bottom)}
+.num{font-variant-numeric:tabular-nums;font-feature-settings:"tnum" 1}
+button{font:inherit;color:inherit;cursor:pointer}
+input,select,textarea{font:inherit;color:inherit}
+.wrap{max-width:820px;margin:0 auto;padding:0 14px 110px}
+.hide{display:none !important}
+
+.board{background:var(--board);color:#fff;padding:calc(10px + env(safe-area-inset-top)) 14px 10px;position:sticky;top:0;z-index:20}
+.board-in{max-width:820px;margin:0 auto;display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:10px}
+.side{min-width:0}.side.r{text-align:right}
+.tname{font-size:13px;color:#9AA0A6;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tscore{font-size:42px;line-height:1;font-weight:500;color:var(--lamp);letter-spacing:-.02em}
+.mid{text-align:center}
+.per{background:#24272C;border:1px solid #34383E;color:#fff;border-radius:6px;padding:7px 10px;font-size:13px;min-height:38px}
+.board-sub{max-width:820px;margin:6px auto 0;display:flex;justify-content:space-between;font-size:11px;color:#7C8288;gap:10px}
+.board-title{color:#fff;font-size:15px;text-align:center;padding:2px 0}
+
+.nav{display:flex;gap:2px;border-bottom:1px solid var(--line);margin:0 0 16px;overflow-x:auto}
+.nav button{background:none;border:0;border-bottom:2px solid transparent;padding:12px;font-size:14px;color:var(--ink-2);white-space:nowrap}
+.nav button[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--ink);font-weight:500}
+
+h2{font-size:18px;font-weight:500;margin:22px 0 4px;letter-spacing:-.01em}
+h2:first-child{margin-top:18px}
+h3{font-size:14px;font-weight:500;margin:18px 0 8px}
+.sub{color:var(--ink-2);font-size:13px;margin:0 0 14px}
+.row{display:flex;gap:8px;align-items:center}
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px;margin-bottom:12px}
+label.f{display:block;font-size:13px;color:var(--ink-2);margin:0 0 5px}
+input[type=text],input[type=number],select,textarea{width:100%;background:var(--card);border:1px solid var(--line-2);border-radius:8px;padding:11px 12px;min-height:var(--tap)}
+textarea{min-height:70px;resize:vertical}
+input:focus-visible,select:focus-visible,button:focus-visible,textarea:focus-visible{outline:2px solid var(--home);outline-offset:2px}
+.btn{background:var(--card);border:1px solid var(--line-2);border-radius:8px;padding:13px 16px;min-height:var(--tap);font-size:15px}
+.btn.solid{background:var(--ink);border-color:var(--ink);color:#fff;font-weight:500}
+.btn.danger{color:var(--bad);border-color:#E4C4C4}
+.btn.wide{width:100%}
+.btn.sm{min-height:40px;padding:8px 12px;font-size:14px;border-radius:7px}
+.btns{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+
+.chips{display:flex;flex-wrap:wrap;gap:7px}
+.chip{background:var(--card);border:1px solid var(--line-2);border-radius:20px;padding:9px 14px;min-height:44px;font-size:14px;display:flex;align-items:center;gap:7px}
+.chip[aria-pressed="true"]{background:var(--home);border-color:var(--home);color:#fff}
+.chip .ck{font-size:12px;opacity:.85}
+
+.teamtabs{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:14px 0}
+.teamtab{border:1px solid var(--line-2);background:var(--card);border-radius:9px;padding:12px 8px;min-height:var(--tap);font-size:15px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.teamtab[aria-pressed="true"]{color:#fff;font-weight:500}
+.teamtab.h[aria-pressed="true"]{background:var(--home);border-color:var(--home)}
+.teamtab.a[aria-pressed="true"]{background:var(--away);border-color:var(--away)}
+
+.legend{display:flex;justify-content:space-between;align-items:center;gap:10px;margin:0 0 10px;font-size:12px;color:var(--ink-3);letter-spacing:.04em}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(104px,1fr));gap:8px}
+.plr{background:var(--card);border:1px solid var(--line-2);border-radius:10px;padding:10px 8px;min-height:76px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;text-align:center}
+.plr .jn{font-size:17px;font-weight:500;line-height:1.15;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.plr .nm{font-size:11px;color:var(--ink-2);max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.plr .ln{font-size:11px;color:var(--ink-3);margin-top:1px}
+.plr[aria-pressed="true"]{border-width:2px;padding:9px 7px}
+.plr.h[aria-pressed="true"]{background:var(--home-soft);border-color:var(--home)}
+.plr.a[aria-pressed="true"]{background:var(--away-soft);border-color:var(--away)}
+.plr.p[aria-pressed="true"]{background:var(--prac-soft);border-color:var(--prac)}
+
+.dock{position:sticky;bottom:0;z-index:15;margin-top:14px;background:var(--page);border-top:1px solid var(--line);padding:10px 0 calc(10px + env(safe-area-inset-bottom))}
+.dock-hint{font-size:13px;color:var(--ink-2);text-align:center;padding:10px 0}
+.who{font-size:14px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;gap:8px}
+.acts{display:grid;grid-template-columns:repeat(3,1fr);gap:7px}
+.act{border:1px solid var(--line-2);background:var(--card);border-radius:9px;min-height:58px;font-size:15px;font-weight:500;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;padding:4px}
+.act small{font-weight:400;font-size:11px;color:var(--ink-2)}
+.undo{display:flex;gap:7px;margin-top:7px}
+.undo .btn{flex:1}
+
+.tw{overflow-x:auto;-webkit-overflow-scrolling:touch;margin-bottom:6px}
+table{border-collapse:collapse;width:100%;font-size:14px}
+th,td{padding:9px 8px;text-align:right;border-bottom:1px solid var(--line);white-space:nowrap}
+th{font-size:12px;color:var(--ink-2);font-weight:400}
+th:first-child,td:first-child{text-align:left}
+tbody tr:last-child td{border-bottom:0}
+tfoot td{font-weight:500;border-top:2px solid var(--line-2);border-bottom:0}
+.tteam{display:inline-block;padding:3px 9px;border-radius:5px;font-size:13px;font-weight:500;margin:18px 0 6px}
+.tteam.h{background:var(--home-soft);color:var(--home)}
+.tteam.a{background:var(--away-soft);color:var(--away)}
+.tteam.p{background:var(--prac-soft);color:var(--prac)}
+.dnp{color:var(--ink-3)}
+
+.log{list-style:none;margin:10px 0 0;padding:0}
+.log li{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:9px 2px;border-bottom:1px solid var(--line);font-size:14px}
+.log .meta{color:var(--ink-3);font-size:12px}
+.xbtn{background:none;border:0;color:var(--bad);font-size:13px;padding:8px 6px;min-height:40px}
+
+.empty{text-align:center;color:var(--ink-2);padding:44px 16px;font-size:15px}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(18px + env(safe-area-inset-bottom));background:var(--board);color:#fff;padding:11px 16px;border-radius:8px;font-size:14px;z-index:60;max-width:88vw;box-shadow:0 6px 22px rgba(0,0,0,.22)}
+.note{font-size:13px;color:var(--ink-2);background:#F2F0EA;border:1px solid var(--line);border-radius:8px;padding:11px 13px;margin-bottom:12px}
+.warn{background:#FBF0E4;border-color:#E8D3B4}
+.pill{display:inline-block;font-size:11px;padding:2px 8px;border-radius:10px;background:var(--line);color:var(--ink-2);margin-left:6px}
+.pill.game{background:var(--home-soft);color:var(--home)}
+.pill.practice{background:var(--prac-soft);color:var(--prac)}
+.timer{font-size:46px;font-weight:500;text-align:center;letter-spacing:-.02em;padding:8px 0}
+.viewsw{display:flex;gap:6px;margin:0 0 10px}
+.viewsw .chip{min-height:38px;padding:6px 12px;font-size:13px}
+.tapgrid{border-collapse:separate;border-spacing:4px;width:auto;min-width:100%}
+.tapgrid th{font-size:12px;padding:4px 2px;text-align:center;color:var(--ink-2);border:0}
+.tapgrid th:first-child{text-align:left}
+.tapgrid td{padding:0;border:0;text-align:center}
+.tapgrid .nmcell{position:sticky;left:0;z-index:2;background:var(--page);text-align:left;
+  padding:0 6px 0 0;max-width:108px;min-width:84px}
+.tapgrid .nmcell b{display:block;font-weight:500;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tapgrid .nmcell small{display:block;font-size:11px;color:var(--ink-3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tapgrid .ptscell{font-size:15px;font-weight:500;min-width:40px}
+.cell{width:50px;height:50px;border:1px solid var(--line-2);background:var(--card);border-radius:9px;
+  font-size:17px;font-weight:500;display:flex;align-items:center;justify-content:center;padding:0}
+.cell:active{transform:scale(.94)}
+.cell.zero{color:var(--ink-3);font-weight:400}
+.tapgrid.h .cell:active{background:var(--home-soft);border-color:var(--home)}
+.tapgrid.a .cell:active{background:var(--away-soft);border-color:var(--away)}
+.minus .cell{border-color:#E4C4C4;background:#FBF1F1}
+.btn[aria-pressed="true"].mtog{background:var(--bad);border-color:var(--bad);color:#fff}
+.srow{display:grid;grid-template-columns:1fr 92px 44px;gap:8px;align-items:center;margin-bottom:8px}
+@media print{.noprint{display:none !important}body{background:#fff;font-size:12px}.wrap{max-width:none;padding:0}.card{border:0;padding:0}}
+</style>
+</head>
+<body>
+<div class="board noprint" id="board"></div>
+<div class="wrap">
+  <nav class="nav noprint" id="nav"></nav>
+  <main id="view"></main>
+</div>
+<script>
+"use strict";
+/* APP */
+
+var KEY = "j17.statbook.v2";
+var OLDKEY = "j17.statbook.v1";
+var SCHEMA = 2;
+
+/* ---------- state ---------- */
+var S = null;
+var UI = { tab:"session", team:0, sel:null, editStats:false, setup:null, drill:null, card:null, minus:false };
+
+function uid(p){ return (p||"x") + Math.random().toString(36).slice(2,8) + Date.now().toString(36).slice(-3); }
+
+/* ---------- stat catalog ----------
+   kind: count   -> tally of occurrences (points, rebounds)
+         measure -> a number; best/latest matters (vertical jump)
+         time    -> a number in seconds; lower is better
+   scope: game | practice
+   pts:  points each occurrence adds to the score (scoring stats only)          */
+function seedStats(){
+  return [
+    { key:"2P",  label:"2-pointer",   short:"2P",  kind:"count", scope:"game", pts:2, on:true },
+    { key:"3P",  label:"3-pointer",   short:"3P",  kind:"count", scope:"game", pts:3, on:true },
+    { key:"1P",  label:"Free throw",  short:"1P",  kind:"count", scope:"game", pts:1, on:true },
+    { key:"REB", label:"Rebound",     short:"REB", kind:"count", scope:"game", on:true },
+    { key:"AST", label:"Assist",      short:"AST", kind:"count", scope:"game", on:true },
+    { key:"STL", label:"Steal",       short:"STL", kind:"count", scope:"game", on:true },
+    { key:"BLK", label:"Block",       short:"BLK", kind:"count", scope:"game", on:true },
+    { key:"PF",  label:"Foul",        short:"PF",  kind:"count", scope:"game", on:true },
+    { key:"TO",  label:"Turnover",    short:"TO",  kind:"count", scope:"game", on:false },
+    { key:"VERT",  label:"Vertical jump", short:"VERT", kind:"measure", unit:"in", scope:"practice", on:true },
+    { key:"SPRFC",  label:"Full court sprint",     short:"FC",   kind:"time", unit:"s", scope:"practice", lowerBetter:true, on:true },
+    { key:"SPRFCB", label:"Full court with ball",  short:"FCB",  kind:"time", unit:"s", scope:"practice", lowerBetter:true, on:true },
+    { key:"LANE",  label:"Lane agility",  short:"LANE", kind:"time", unit:"s", scope:"practice", lowerBetter:true, on:true },
+    { key:"FT10",  label:"Free throws /10", short:"FT10", kind:"measure", unit:"/10", scope:"practice", on:true }
+  ];
+}
+function blankState(){
+  return { v:SCHEMA, players:[], stats:seedStats(), sessions:[], activeId:null, prefs:{ gameView:"grid" } };
+}
+function statByKey(k){
+  for(var i=0;i<S.stats.length;i++){ if(S.stats[i].key === k) return S.stats[i]; }
+  return { key:k, label:k, short:k, kind:"count", scope:"game" };
+}
+function statsIn(scope, onlyOn){
+  return S.stats.filter(function(s){ return s.scope === scope && (!onlyOn || s.on); });
+}
+
+/* ---------- storage + migration ---------- */
+function load(){
+  var raw = null, old = null;
+  try{ raw = localStorage.getItem(KEY); old = localStorage.getItem(OLDKEY); }catch(e){}
+  if(raw){
+    try{
+      var d = JSON.parse(raw);
+      if(d && d.v > SCHEMA){ S = blankState(); S.tooNew = true; return; }
+      S = upgrade(d);
+      return;
+    }catch(e){}
+  }
+  if(old){
+    try{ S = migrateV1(JSON.parse(old)); save(); return; }catch(e){}
+  }
+  S = blankState();
+}
+function upgrade(d){
+  if(!d || !d.v){ return blankState(); }
+  // future migrations chain here: if(d.v === 2){ ...; d.v = 3; }
+  if(!d.players) d.players = [];
+  if(!d.stats || !d.stats.length) d.stats = seedStats();
+  if(!d.sessions) d.sessions = [];
+  if(!d.prefs) d.prefs = { gameView:"grid" };
+  return d;
+}
+function migrateV1(old){
+  var st = blankState();
+  if(!old || !old.games) return st;
+  var idMap = {};
+  old.games.slice().reverse().forEach(function(g){
+    var sess = { id:uid("s"), date:g.created, kind:"game", title:"", format:g.format || "quarters",
+                 period:g.period || "Q1", done:!!g.done, teams:[], finalScore:[null,null],
+                 events:[], notes:"" };
+    (g.teams || []).forEach(function(t){
+      var ids = [];
+      (t.players || []).forEach(function(p){
+        // v1 put the label in `num` and the descriptor in `name`
+        var label = String(p.num || "").trim();
+        var desc  = String(p.name || "").trim();
+        var reg = findOrAddPlayer(st, label, desc);
+        idMap[p.id] = reg.id;
+        ids.push(reg.id);
+      });
+      sess.teams.push({ name:t.name || "Team", playerIds:ids });
+    });
+    (g.events || []).forEach(function(e){
+      var key = e.s;
+      var val = 1;
+      if(e.s === "PTS"){ key = e.v === 3 ? "3P" : e.v === 1 ? "1P" : "2P"; }
+      sess.events.push({ id:uid("e"), t:e.t, sid:sess.id, pid:idMap[e.pl], key:key, v:val,
+                         period:e.p, team:e.tm });
+    });
+    st.sessions.unshift(sess);
+  });
+  st.activeId = st.sessions.length ? st.sessions[0].id : null;
+  st.migratedFromV1 = true;
+  return st;
+}
+function findOrAddPlayer(st, name, desc){
+  var norm = String(name).trim().toLowerCase();
+  for(var i=0;i<st.players.length;i++){
+    var p = st.players[i];
+    if(p.name.trim().toLowerCase() === norm) return p;
+    if((p.aliases||[]).some(function(a){ return a.trim().toLowerCase() === norm; })) return p;
+  }
+  var np = { id:uid("p"), name:String(name).trim() || "Unnamed", aliases:[],
+             num:"", desc:String(desc||"").trim(), notes:"", active:true };
+  st.players.push(np);
+  return np;
+}
+function save(){
+  try{
+    localStorage.setItem(KEY, JSON.stringify(S));
+    stamp("Saved " + new Date().toLocaleTimeString([], {hour:"2-digit",minute:"2-digit"}));
+  }catch(e){ stamp("Not saved — export a backup"); }
+}
+var stampText = "";
+function stamp(t){ stampText = t; var el = document.getElementById("bdSaved"); if(el) el.textContent = t; }
+
+/* ---------- accessors ---------- */
+function activeSession(){
+  for(var i=0;i<S.sessions.length;i++){ if(S.sessions[i].id === S.activeId) return S.sessions[i]; }
+  return null;
+}
+function player(pid){
+  for(var i=0;i<S.players.length;i++){ if(S.players[i].id === pid) return S.players[i]; }
+  return null;
+}
+function pname(pid){ var p = player(pid); return p ? p.name : "?"; }
+function sessionPlayerIds(sess){
+  if(sess.kind === "practice") return sess.playerIds || [];
+  var out = [];
+  (sess.teams||[]).forEach(function(t){ (t.playerIds||[]).forEach(function(i){ out.push(i); }); });
+  return out;
+}
+function periodsFor(sess){
+  var out = sess.format === "halves" ? ["H1","H2"] : ["Q1","Q2","Q3","Q4"];
+  return out.concat(["OT1","OT2"]);
+}
+
+/* ---------- derivation ---------- */
+function totalsFor(sess){
+  var map = {};
+  sessionPlayerIds(sess).forEach(function(pid){ map[pid] = { n:0 }; });
+  sess.events.forEach(function(e){
+    var m = map[e.pid] || (map[e.pid] = { n:0 });
+    var st = statByKey(e.key);
+    if(st.kind === "count"){ m[e.key] = (m[e.key] || 0) + (e.v || 1); }
+    else { (m[e.key] || (m[e.key] = [])).push(e.v); }
+    m.n += 1;
+  });
+  return map;
+}
+function pointsOf(m){
+  var p = 0;
+  S.stats.forEach(function(s){ if(s.pts && m[s.key]) p += s.pts * m[s.key]; });
+  return p;
+}
+function teamScore(sess, ti){
+  if(sess.kind !== "game") return 0;
+  var ids = (sess.teams[ti] && sess.teams[ti].playerIds) || [];
+  var tot = totalsFor(sess), p = 0;
+  ids.forEach(function(pid){ if(tot[pid]) p += pointsOf(tot[pid]); });
+  return p;
+}
+function bestOf(st, arr){
+  if(!arr || !arr.length) return null;
+  return st.lowerBetter ? Math.min.apply(null, arr) : Math.max.apply(null, arr);
+}
+function fmtVal(st, v){
+  if(v === null || v === undefined) return "—";
+  var n = Math.round(v * 100) / 100;
+  return n + (st.unit ? " " + st.unit : "");
+}
+
+/* ---------- dom helper ---------- */
+function el(tag, attrs, kids){
+  var e = document.createElement(tag);
+  if(attrs) Object.keys(attrs).forEach(function(k){
+    if(k === "text") e.textContent = attrs[k];
+    else if(k === "html") e.innerHTML = attrs[k];
+    else if(k === "on") Object.keys(attrs.on).forEach(function(ev){ e.addEventListener(ev, attrs.on[ev]); });
+    else if(k === "cls") e.className = attrs[k];
+    else if(attrs[k] !== null && attrs[k] !== undefined) e.setAttribute(k, attrs[k]);
+  });
+  (kids || []).forEach(function(k){ if(k) e.appendChild(k); });
+  return e;
+}
+var toastTimer = null;
+function toast(msg){
+  var old = document.querySelector(".toast"); if(old) old.remove();
+  var d = el("div",{cls:"toast",role:"status",text:msg});
+  document.body.appendChild(d);
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(function(){ if(d.parentNode) d.remove(); }, 1900);
+}
+
+/* ---------- actions ---------- */
+function record(key, val, pid){
+  var sess = activeSession(); if(!sess) return;
+  var target = pid || UI.sel; if(!target) return;
+  var st = statByKey(key);
+  sess.events.push({ id:uid("e"), t:Date.now(), sid:sess.id, pid:target, key:key,
+                     v: val === undefined ? 1 : val,
+                     period: sess.kind === "game" ? sess.period : null,
+                     team: sess.kind === "game" ? UI.team : null });
+  toast(pname(target) + " · " + (st.kind === "count" ? st.label : st.label + " " + fmtVal(st, val)));
+  save(); render();
+}
+function removeLast(pid, key){
+  var sess = activeSession(); if(!sess) return;
+  for(var i = sess.events.length - 1; i >= 0; i--){
+    var e = sess.events[i];
+    if(e.pid === pid && e.key === key){
+      sess.events.splice(i, 1);
+      toast("Removed " + pname(pid) + " " + statByKey(key).label.toLowerCase());
+      save(); render();
+      return;
+    }
+  }
+  toast(pname(pid) + " has no " + statByKey(key).label.toLowerCase() + " to remove");
+}
+function undoLast(){
+  var sess = activeSession(); if(!sess || !sess.events.length) return;
+  var e = sess.events.pop();
+  toast("Removed " + pname(e.pid) + " " + statByKey(e.key).label.toLowerCase());
+  save(); render();
+}
+function deleteEvent(id){
+  var sess = activeSession(); if(!sess) return;
+  sess.events = sess.events.filter(function(e){ return e.id !== id; });
+  save(); render();
+}
+
+/* ---------- shell ---------- */
+var TABS = [["session","Session"],["box","Box score"],["log","Log"],
+            ["sessions","Sessions"],["players","Players"],["stats","Stats"],["card","Report card"]];
+function renderNav(){
+  var n = document.getElementById("nav"); n.innerHTML = "";
+  TABS.forEach(function(t){
+    n.appendChild(el("button",{role:"tab","aria-selected": UI.tab===t[0] ? "true":"false", text:t[1],
+      on:{click:function(){ UI.tab = t[0]; UI.sel = null; render(); }}}));
+  });
+}
+function renderBoard(){
+  var b = document.getElementById("board"); b.innerHTML = "";
+  var sess = activeSession();
+  var inner = el("div",{cls:"board-in"});
+  if(sess && sess.kind === "game"){
+    inner.appendChild(el("div",{cls:"side"},[
+      el("div",{cls:"tname",text:sess.teams[0].name}),
+      el("div",{cls:"tscore num",text:String(teamScore(sess,0))})
+    ]));
+    var sel = el("select",{cls:"per","aria-label":"Period"});
+    sel.innerHTML = periodsFor(sess).map(function(p){
+      return '<option value="'+p+'"'+(p===sess.period?' selected':'')+'>'+p+'</option>'; }).join("");
+    sel.onchange = function(){ sess.period = sel.value; save(); };
+    inner.appendChild(el("div",{cls:"mid"},[sel]));
+    inner.appendChild(el("div",{cls:"side r"},[
+      el("div",{cls:"tname",text:sess.teams[1].name}),
+      el("div",{cls:"tscore num",text:String(teamScore(sess,1))})
+    ]));
+  } else if(sess){
+    inner.appendChild(el("div",{}));
+    inner.appendChild(el("div",{cls:"mid board-title",text:(sess.title || "Practice")}));
+    inner.appendChild(el("div",{}));
+  } else {
+    inner.appendChild(el("div",{}));
+    inner.appendChild(el("div",{cls:"mid board-title",text:"J17 Stat Book"}));
+    inner.appendChild(el("div",{}));
+  }
+  b.appendChild(inner);
+  b.appendChild(el("div",{cls:"board-sub"},[
+    el("span",{id:"bdMeta", text: sess
+      ? new Date(sess.date).toLocaleDateString() + (sess.done ? " · final" : " · open")
+      : "No session open"}),
+    el("span",{id:"bdSaved",text:stampText})
+  ]));
+}
+function render(){
+  renderNav(); renderBoard();
+  var v = document.getElementById("view"); v.innerHTML = "";
+  if(S.tooNew){
+    v.appendChild(el("div",{cls:"note warn",
+      text:"This file was saved by a newer version of the app. It hasn't been touched — open it with the newer version, or restore a backup."}));
+    return;
+  }
+  if(S.migratedFromV1){
+    v.appendChild(el("div",{cls:"note",
+      text:"Your earlier games were brought across. Points were split into 2P / 3P / 1P automatically."}));
+    delete S.migratedFromV1; save();
+  }
+  ({ session:viewSession, box:viewBox, log:viewLog, sessions:viewSessions,
+     players:viewPlayers, stats:viewStats, card:viewCard }[UI.tab] || viewSession)(v);
+}
+
+/* ---------- session: router ---------- */
+function viewSession(v){
+  var sess = activeSession();
+  if(!sess){ viewNewSession(v); return; }
+  if(sess.kind === "game") viewGame(v, sess); else viewPractice(v, sess);
+}
+
+/* ---------- game workflow ---------- */
+function viewGame(v, sess){
+  var tot = totalsFor(sess);
+  var on = statsIn("game", true);
+
+  var tabs = el("div",{cls:"teamtabs"});
+  sess.teams.forEach(function(t, ti){
+    tabs.appendChild(el("button",{cls:"teamtab " + (ti===0?"h":"a"),
+      "aria-pressed": UI.team===ti ? "true":"false",
+      text: t.name + "  " + teamScore(sess,ti),
+      on:{click:function(){ UI.team = ti; UI.sel = null; UI.minus = false; render(); }}}));
+  });
+  v.appendChild(tabs);
+
+  var shown = on.filter(function(s){ return !s.pts; });
+
+  var mode = (S.prefs && S.prefs.gameView) || "grid";
+  var sw = el("div",{cls:"viewsw noprint"});
+  [["grid","Tap grid"],["tiles","Tiles"]].forEach(function(m){
+    sw.appendChild(el("button",{cls:"chip","aria-pressed": mode===m[0] ? "true":"false", text:m[1],
+      on:{click:function(){ S.prefs = S.prefs || {}; S.prefs.gameView = m[0]; UI.sel = null; save(); render(); }}}));
+  });
+  sw.appendChild(el("button",{cls:"btn sm",style:"margin-left:auto",text:"Stats",
+    on:{click:function(){ UI.tab="stats"; render(); }}}));
+  v.appendChild(sw);
+
+  if(mode === "grid"){ viewTapGrid(v, sess, tot); return; }
+
+  v.appendChild(el("div",{cls:"legend"},[
+    el("span",{text:"PTS · " + shown.map(function(s){ return s.short; }).join(" · ")})
+  ]));
+
+  var ids = sess.teams[UI.team].playerIds;
+  var grid = el("div",{cls:"grid"});
+  ids.forEach(function(pid){
+    var p = player(pid), m = tot[pid] || {n:0};
+    var b = el("button",{cls:"plr " + (UI.team===0?"h":"a"),
+      "aria-pressed": UI.sel===pid ? "true":"false",
+      on:{click:function(){ UI.sel = (UI.sel===pid ? null : pid); render(); }}});
+    b.appendChild(el("span",{cls:"jn",text:p ? p.name : "?"}));
+    if(p && p.desc) b.appendChild(el("span",{cls:"nm",text:p.desc}));
+    b.appendChild(el("span",{cls:"ln num",
+      text: pointsOf(m) + " · " + shown.map(function(s){ return m[s.key] || 0; }).join(" · ")}));
+    grid.appendChild(b);
+  });
+  v.appendChild(grid);
+  v.appendChild(el("button",{cls:"btn sm",style:"margin-top:10px",
+    text:"+ Add player to " + sess.teams[UI.team].name,
+    on:{click:function(){ UI.tab = "players"; UI.addTo = UI.team; render(); }}}));
+
+  var dock = el("div",{cls:"dock noprint"});
+  if(!UI.sel){
+    dock.appendChild(el("div",{cls:"dock-hint",text:"Tap a player, then tap the stat."}));
+  } else {
+    dock.appendChild(el("div",{cls:"who"},[
+      el("strong",{text:pname(UI.sel)}),
+      el("button",{cls:"btn sm",text:"Clear",on:{click:function(){ UI.sel=null; render(); }}})
+    ]));
+    var scoring = on.filter(function(s){ return s.pts; });
+    if(scoring.length){
+      var a1 = el("div",{cls:"acts"});
+      scoring.forEach(function(s){
+        var b = el("button",{cls:"act",on:{click:function(){ record(s.key); }}});
+        b.appendChild(document.createTextNode("+" + s.pts));
+        b.appendChild(el("small",{text:s.label}));
+        a1.appendChild(b);
+      });
+      dock.appendChild(a1);
+    }
+    if(shown.length){
+      var cols = Math.min(shown.length, 3);
+      var a2 = el("div",{cls:"acts",style:"margin-top:7px;grid-template-columns:repeat("+cols+",1fr)"});
+      shown.forEach(function(s){
+        a2.appendChild(el("button",{cls:"act",text:s.label,on:{click:function(){ record(s.key); }}}));
+      });
+      dock.appendChild(a2);
+    }
+  }
+  dock.appendChild(gameControls(sess, false));
+  v.appendChild(dock);
+}
+function gameControls(sess, withMinus){
+  var u = el("div",{cls:"undo"});
+  if(withMinus){
+    u.appendChild(el("button",{cls:"btn mtog","aria-pressed": UI.minus ? "true":"false",
+      text: UI.minus ? "Minus: on" : "Minus",
+      on:{click:function(){ UI.minus = !UI.minus; render(); }}}));
+  }
+  u.appendChild(el("button",{cls:"btn",text:"Undo last",on:{click:undoLast}}));
+  u.appendChild(el("button",{cls:"btn",text: sess.done ? "Reopen" : "Finish",
+    on:{click:function(){
+      if(!sess.done && !confirm("Finish this game? You can still edit it afterwards.")) return;
+      sess.done = !sess.done; UI.minus = false; save(); UI.tab = sess.done ? "box" : "session"; render();
+    }}}));
+  return u;
+}
+
+/* ---------- tap grid: one tap per stat ---------- */
+function viewTapGrid(v, sess, tot){
+  var cols = gameCols();
+  var side = UI.team === 0 ? "h" : "a";
+  var tbl = el("table",{cls:"tapgrid " + side + (UI.minus ? " minus" : "")});
+  var hr = el("tr");
+  hr.appendChild(el("th",{text:"Player"}));
+  hr.appendChild(el("th",{text:"PTS"}));
+  cols.forEach(function(c){ hr.appendChild(el("th",{text:c.short})); });
+  tbl.appendChild(el("thead",{},[hr]));
+  var tb = el("tbody");
+  sess.teams[UI.team].playerIds.forEach(function(pid){
+    var p = player(pid), m = tot[pid] || {n:0};
+    var tr = el("tr");
+    var nm = el("td",{cls:"nmcell"});
+    nm.appendChild(el("b",{text: p ? p.name : "?"}));
+    if(p && p.desc) nm.appendChild(el("small",{text:p.desc}));
+    tr.appendChild(nm);
+    tr.appendChild(el("td",{cls:"ptscell num",text:String(pointsOf(m))}));
+    cols.forEach(function(c){
+      var n = m[c.key] || 0;
+      var b = el("button",{cls:"cell num" + (n ? "" : " zero"), text:String(n),
+        "aria-label": (UI.minus ? "Remove " : "Add ") + c.label + " for " + (p ? p.name : "player"),
+        "data-pid": pid, "data-key": c.key,
+        on:{click:function(){ if(UI.minus) removeLast(pid, c.key); else record(c.key, undefined, pid); }}});
+      tr.appendChild(el("td",{},[b]));
+    });
+    tb.appendChild(tr);
+  });
+  tbl.appendChild(tb);
+  v.appendChild(el("div",{cls:"tw"},[tbl]));
+  v.appendChild(el("p",{cls:"sub",style:"margin-top:8px",
+    text: UI.minus ? "Minus is on — each tap removes that player's most recent entry for that stat."
+                   : "Tap a cell to add one. Scoring cells add their points to the scoreboard."}));
+  v.appendChild(el("button",{cls:"btn sm",text:"+ Add player to " + sess.teams[UI.team].name,
+    on:{click:function(){ UI.tab = "players"; render(); }}}));
+  var dock = el("div",{cls:"dock noprint"});
+  dock.appendChild(gameControls(sess, true));
+  v.appendChild(dock);
+}
+
+/* ---------- practice workflow ---------- */
+var swStart = null, swTimer = null, swElapsed = 0;
+function swNow(){ return swStart ? swElapsed + (Date.now() - swStart) : swElapsed; }
+function swTick(){ var e = document.getElementById("swFace"); if(e) e.textContent = (swNow()/1000).toFixed(2); }
+function swToggle(){
+  if(swStart){ swElapsed = swNow(); swStart = null; clearInterval(swTimer); swTimer = null; }
+  else { swStart = Date.now(); swTimer = setInterval(swTick, 50); }
+  render();
+}
+function swReset(){ swStart = null; swElapsed = 0; clearInterval(swTimer); swTimer = null; render(); }
+
+function viewPractice(v, sess){
+  var on = statsIn("practice", true);
+  if(!on.length){ v.appendChild(el("div",{cls:"empty",text:"No practice stats switched on. Add one in the Stats tab."})); return; }
+  var drill = UI.drill || on[0].key;
+  var st = statByKey(drill);
+  var tot = totalsFor(sess);
+
+  v.appendChild(el("h2",{text: sess.title || "Practice"}));
+  v.appendChild(el("p",{cls:"sub",text:"Pick a drill, then a player. One session holds every drill you run today."}));
+
+  var chips = el("div",{cls:"chips",style:"margin-bottom:14px"});
+  on.forEach(function(s){
+    chips.appendChild(el("button",{cls:"chip","aria-pressed": s.key===drill ? "true":"false",
+      text:s.label, on:{click:function(){ UI.drill = s.key; UI.sel = null; swReset(); }}}));
+  });
+  v.appendChild(chips);
+
+  if(st.kind === "time"){
+    var card = el("div",{cls:"card"});
+    card.appendChild(el("div",{cls:"timer num",id:"swFace",text:(swNow()/1000).toFixed(2)}));
+    card.appendChild(el("div",{cls:"grid2"},[
+      el("button",{cls:"btn",text: swStart ? "Stop" : (swElapsed ? "Resume" : "Start"),on:{click:swToggle}}),
+      el("button",{cls:"btn",text:"Reset",on:{click:swReset}})
+    ]));
+    card.appendChild(el("div",{cls:"dock-hint",
+      text: UI.sel ? ("Recording for " + pname(UI.sel)) : "Select a player below to record the time."}));
+    if(UI.sel && swElapsed && !swStart){
+      card.appendChild(el("button",{cls:"btn solid wide",
+        text:"Record " + (swElapsed/1000).toFixed(2) + "s for " + pname(UI.sel),
+        on:{click:function(){ var val = Math.round(swElapsed)/1000; swReset(); record(drill, val); }}}));
+    }
+    v.appendChild(card);
+  }
+
+  var grid = el("div",{cls:"grid"});
+  (sess.playerIds || []).forEach(function(pid){
+    var p = player(pid), m = tot[pid] || {n:0};
+    var vals = m[drill] || [];
+    var b = el("button",{cls:"plr p","aria-pressed": UI.sel===pid ? "true":"false",
+      on:{click:function(){ UI.sel = (UI.sel===pid ? null : pid); render(); }}});
+    b.appendChild(el("span",{cls:"jn",text:p ? p.name : "?"}));
+    b.appendChild(el("span",{cls:"ln num",
+      text: vals.length ? fmtVal(st, bestOf(st, vals)) + " (" + vals.length + ")" : "—"}));
+    grid.appendChild(b);
+  });
+  v.appendChild(grid);
+
+  var dock = el("div",{cls:"dock noprint"});
+  if(st.kind !== "time"){
+    if(!UI.sel){
+      dock.appendChild(el("div",{cls:"dock-hint",text:"Tap a player, then enter the number."}));
+    } else {
+      dock.appendChild(el("div",{cls:"who"},[
+        el("strong",{text:pname(UI.sel) + " · " + st.label}),
+        el("button",{cls:"btn sm",text:"Clear",on:{click:function(){ UI.sel=null; render(); }}})
+      ]));
+      var inp = el("input",{type:"number",step:"any",inputmode:"decimal",id:"pracIn",
+        placeholder: st.unit ? ("value in " + st.unit) : "value"});
+      var go = function(){
+        var n = parseFloat(inp.value);
+        if(isNaN(n)){ toast("Enter a number"); return; }
+        record(drill, n);
+      };
+      inp.addEventListener("keydown", function(e){ if(e.key === "Enter") go(); });
+      dock.appendChild(el("div",{cls:"grid2"},[inp, el("button",{cls:"btn solid",text:"Record",on:{click:go}})]));
+    }
+  }
+  dock.appendChild(el("div",{cls:"undo"},[el("button",{cls:"btn",text:"Undo last",on:{click:undoLast}})]));
+  v.appendChild(dock);
+}
+
+/* ---------- new session ---------- */
+function viewNewSession(v){
+  if(!UI.setup) UI.setup = { kind:"game", title:"", format:"quarters",
+                             names:["Black","White"], picks:[[],[]], pracIds:[] };
+  var c = UI.setup;
+  v.appendChild(el("h2",{text:"New session"}));
+
+  var kind = el("div",{cls:"chips",style:"margin-bottom:14px"});
+  [["game","Game"],["practice","Practice"]].forEach(function(k){
+    kind.appendChild(el("button",{cls:"chip","aria-pressed": c.kind===k[0] ? "true":"false",
+      text:k[1],on:{click:function(){ c.kind = k[0]; render(); }}}));
+  });
+  v.appendChild(kind);
+
+  if(!S.players.length){
+    v.appendChild(el("div",{cls:"note",text:"No players yet. Add them in the Players tab first — they only need entering once."}));
+    v.appendChild(el("button",{cls:"btn solid wide",text:"Go to Players",
+      on:{click:function(){ UI.tab="players"; render(); }}}));
+    return;
+  }
+
+  if(c.kind === "game"){
+    [0,1].forEach(function(ti){
+      var box = el("div",{cls:"card"});
+      box.appendChild(el("label",{cls:"f",text:"Team " + (ti+1) + " name"}));
+      var ni = el("input",{type:"text",value:c.names[ti]});
+      ni.addEventListener("input", function(){ c.names[ti] = ni.value; });
+      box.appendChild(ni);
+      box.appendChild(el("h3",{text:"Who's on this team"}));
+      box.appendChild(pickerFor(c.picks[ti], c.picks[1-ti]));
+      v.appendChild(box);
+    });
+    var fmt = el("select",{on:{change:function(e){ c.format = e.target.value; }}});
+    fmt.innerHTML = '<option value="quarters">Quarters</option><option value="halves">Halves</option>';
+    fmt.value = c.format;
+    v.appendChild(el("div",{cls:"card"},[el("label",{cls:"f",text:"Periods"}), fmt]));
+    v.appendChild(el("button",{cls:"btn solid wide",text:"Start game",on:{click:function(){
+      if(!c.picks[0].length || !c.picks[1].length){ toast("Pick players for both teams"); return; }
+      startSession({ kind:"game", format:c.format,
+        teams:[{name:c.names[0]||"Team 1",playerIds:c.picks[0].slice()},
+               {name:c.names[1]||"Team 2",playerIds:c.picks[1].slice()}] });
+    }}}));
+  } else {
+    var box2 = el("div",{cls:"card"});
+    box2.appendChild(el("label",{cls:"f",text:"Session name"}));
+    var ti2 = el("input",{type:"text",value:c.title,placeholder:"e.g. Combine testing"});
+    ti2.addEventListener("input", function(){ c.title = ti2.value; });
+    box2.appendChild(ti2);
+    box2.appendChild(el("h3",{text:"Who's here"}));
+    box2.appendChild(pickerFor(c.pracIds, []));
+    v.appendChild(box2);
+    v.appendChild(el("button",{cls:"btn solid wide",text:"Start practice",on:{click:function(){
+      if(!c.pracIds.length){ toast("Pick at least one player"); return; }
+      startSession({ kind:"practice", title:c.title || "Practice", playerIds:c.pracIds.slice() });
+    }}}));
+  }
+}
+function pickerFor(list, other){
+  var wrap = el("div",{cls:"chips"});
+  function draw(){
+    wrap.innerHTML = "";
+    S.players.filter(function(p){ return p.active !== false; }).forEach(function(p){
+      var taken = other.indexOf(p.id) > -1;
+      var on = list.indexOf(p.id) > -1;
+      var b = el("button",{cls:"chip","aria-pressed": on ? "true":"false",
+        style: taken ? "opacity:.35" : null,
+        on:{click:function(){
+          if(taken){ toast(p.name + " is on the other team"); return; }
+          var i = list.indexOf(p.id);
+          if(i > -1) list.splice(i,1); else list.push(p.id);
+          draw();
+        }}});
+      b.appendChild(el("span",{cls:"ck",text: on ? "✓" : "+"}));
+      b.appendChild(document.createTextNode(p.name));
+      wrap.appendChild(b);
+    });
+  }
+  draw();
+  return wrap;
+}
+function startSession(cfg){
+  var sess = { id:uid("s"), date:Date.now(), kind:cfg.kind, title:cfg.title || "",
+               format:cfg.format || "quarters", period:(cfg.format === "halves" ? "H1" : "Q1"),
+               done:false, teams:cfg.teams || [], playerIds:cfg.playerIds || [],
+               finalScore:[null,null], events:[], notes:"" };
+  S.sessions.unshift(sess);
+  S.activeId = sess.id;
+  UI.setup = null; UI.sel = null; UI.team = 0; UI.drill = null; UI.tab = "session";
+  save(); render();
+}
+
+/* ---------- box score ---------- */
+function gameCols(){
+  var on = statsIn("game", true);
+  return on.filter(function(s){ return s.pts; }).concat(on.filter(function(s){ return !s.pts; }));
+}
+function boxTable(sess, ti){
+  var cols = gameCols(), tot = totalsFor(sess);
+  var ids = sess.teams[ti].playerIds;
+  var frag = document.createDocumentFragment();
+  frag.appendChild(el("div",{cls:"tteam " + (ti===0?"h":"a"),
+    text: sess.teams[ti].name + " — " + teamScore(sess,ti)}));
+  var tbl = el("table");
+  tbl.innerHTML = "<thead><tr><th>Player</th><th>PTS</th>" +
+    cols.map(function(s){ return "<th>" + s.short + "</th>"; }).join("") + "</tr></thead>";
+  var tb = el("tbody");
+  var sum = cols.map(function(){ return 0; }), psum = 0;
+  ids.forEach(function(pid){
+    var m = tot[pid] || {n:0};
+    var pts = pointsOf(m); psum += pts;
+    var tr = el("tr", m.n ? {} : {cls:"dnp"});
+    tr.appendChild(el("td",{text:pname(pid)}));
+    tr.appendChild(el("td",{cls:"num",text:String(pts)}));
+    cols.forEach(function(s,i){ var val = m[s.key] || 0; sum[i] += val;
+      tr.appendChild(el("td",{cls:"num",text:String(val)})); });
+    tb.appendChild(tr);
+  });
+  tbl.appendChild(tb);
+  var tf = el("tfoot"), trf = el("tr");
+  trf.appendChild(el("td",{text:"Totals"}));
+  trf.appendChild(el("td",{cls:"num",text:String(psum)}));
+  sum.forEach(function(n){ trf.appendChild(el("td",{cls:"num",text:String(n)})); });
+  tf.appendChild(trf); tbl.appendChild(tf);
+  frag.appendChild(el("div",{cls:"tw"},[tbl]));
+  return frag;
+}
+function practiceTable(sess){
+  var on = statsIn("practice", true), tot = totalsFor(sess);
+  var tbl = el("table");
+  tbl.innerHTML = "<thead><tr><th>Player</th>" +
+    on.map(function(s){ return "<th>" + s.short + "</th>"; }).join("") + "</tr></thead>";
+  var tb = el("tbody");
+  (sess.playerIds||[]).forEach(function(pid){
+    var m = tot[pid] || {n:0};
+    var tr = el("tr", m.n ? {} : {cls:"dnp"});
+    tr.appendChild(el("td",{text:pname(pid)}));
+    on.forEach(function(s){ tr.appendChild(el("td",{cls:"num",text: fmtVal(s, bestOf(s, m[s.key]))})); });
+    tb.appendChild(tr);
+  });
+  tbl.appendChild(tb);
+  return el("div",{cls:"tw"},[tbl]);
+}
+function reconText(sess){
+  var a = sess.finalScore[0], b = sess.finalScore[1];
+  if(a === null || b === null || isNaN(a) || isNaN(b)) return "Add the official score to see your capture rate.";
+  var ta = teamScore(sess,0), tb = teamScore(sess,1);
+  var off = a + b, got = ta + tb;
+  if(!off) return "";
+  var pct = Math.round(got / off * 100);
+  var d1 = ta - a, d2 = tb - b;
+  return "Tracked " + got + " of " + off + " points (" + pct + "%). " +
+    sess.teams[0].name + " " + (d1 === 0 ? "exact" : (d1 > 0 ? "+" + d1 : String(d1))) + ", " +
+    sess.teams[1].name + " " + (d2 === 0 ? "exact" : (d2 > 0 ? "+" + d2 : String(d2))) + ".";
+}
+function viewBox(v){
+  var sess = activeSession();
+  if(!sess){ v.appendChild(el("div",{cls:"empty",text:"No session open."})); return; }
+  v.appendChild(el("h2",{text: sess.kind === "game" ? "Box score" : "Practice results"}));
+  if(sess.kind === "game"){
+    v.appendChild(boxTable(sess,0));
+    v.appendChild(boxTable(sess,1));
+    var fs = el("div",{cls:"card",style:"margin-top:18px"});
+    fs.appendChild(el("label",{cls:"f",text:"Official final score — shows how much you missed"}));
+    var g2 = el("div",{cls:"grid2"});
+    [0,1].forEach(function(ti){
+      var inp = el("input",{type:"number",inputmode:"numeric",placeholder:sess.teams[ti].name,
+        value: sess.finalScore[ti] === null ? "" : sess.finalScore[ti]});
+      inp.addEventListener("input", function(){
+        sess.finalScore[ti] = inp.value === "" ? null : parseInt(inp.value,10);
+        save();
+        var r = document.getElementById("recon"); if(r) r.textContent = reconText(sess);
+      });
+      g2.appendChild(inp);
+    });
+    fs.appendChild(g2);
+    fs.appendChild(el("p",{cls:"sub",id:"recon",style:"margin:10px 0 0",text:reconText(sess)}));
+    v.appendChild(fs);
+  } else {
+    v.appendChild(practiceTable(sess));
+  }
+  v.appendChild(el("div",{cls:"btns noprint",style:"margin-top:18px"},[
+    el("button",{cls:"btn",text:"Export CSV",on:{click:function(){
+      download("session-" + dstamp(sess.date) + ".csv", sessionCSV(sess), "text/csv;charset=utf-8"); }}}),
+    el("button",{cls:"btn",text:"Print",on:{click:function(){ window.print(); }}})
+  ]));
+  var nt = el("textarea",{placeholder:"Notes for this session"});
+  nt.value = sess.notes || "";
+  nt.addEventListener("input", function(){ sess.notes = nt.value; save(); });
+  v.appendChild(el("div",{cls:"card noprint"},[el("label",{cls:"f",text:"Session notes"}), nt]));
+}
+
+/* ---------- log ---------- */
+function viewLog(v){
+  var sess = activeSession();
+  if(!sess){ v.appendChild(el("div",{cls:"empty",text:"No session open."})); return; }
+  v.appendChild(el("h2",{text:"Log"}));
+  v.appendChild(el("p",{cls:"sub",text:"Newest first. Delete a line to correct the totals."}));
+  if(!sess.events.length){ v.appendChild(el("div",{cls:"empty",text:"Nothing recorded yet."})); return; }
+  var ul = el("ul",{cls:"log"});
+  sess.events.slice().reverse().forEach(function(e){
+    var st = statByKey(e.key);
+    var what = st.kind === "count" ? st.label : st.label + " " + fmtVal(st, e.v);
+    var li = el("li");
+    li.appendChild(el("div",{},[
+      el("div",{text: pname(e.pid) + " — " + what}),
+      el("div",{cls:"meta",text: (e.period ? e.period + " · " : "") +
+        new Date(e.t).toLocaleTimeString([], {hour:"2-digit",minute:"2-digit"})})
+    ]));
+    li.appendChild(el("button",{cls:"xbtn",text:"Delete",on:{click:function(){ deleteEvent(e.id); }}}));
+    ul.appendChild(li);
+  });
+  v.appendChild(ul);
+}
+
+/* ---------- sessions ---------- */
+function viewSessions(v){
+  v.appendChild(el("h2",{text:"Sessions"}));
+  v.appendChild(el("div",{cls:"btns"},[
+    el("button",{cls:"btn solid",text:"New session",on:{click:function(){
+      S.activeId = null; UI.setup = null; UI.tab = "session"; render(); }}}),
+    el("button",{cls:"btn",text:"Backup all (JSON)",on:{click:function(){
+      download("j17-statbook-" + dstamp(Date.now()) + ".json", JSON.stringify(S), "application/json"); }}}),
+    el("button",{cls:"btn",text:"Restore (JSON)",on:{click:importBackup}})
+  ]));
+  
+  var csvImport = el("div",{cls:"btns noprint",style:"margin-bottom:14px"});
+  csvImport.appendChild(el("button",{cls:"btn",text:"Import CSVs",
+    on:{click:function(){
+      var uploads = 0;
+      var data = { players: "", sessions: "", events: "" };
+      var keys = Object.keys(data);
+      keys.forEach(key => {
+        var inp = document.createElement("input");
+        inp.type="file"; inp.accept=".csv";
+        inp.onchange = function(){
+          var f = inp.files[0];
+          if(f){
+            var r = new FileReader();
+            r.onload = function(){ data[key] = r.result; uploads++; tryImport(); };
+            r.readAsText(f);
+          } else { uploads++; tryImport(); }
+        };
+        inp.click();
+      });
+      function tryImport(){
+        if(uploads < 3) return;
+        var result = importFromCSVs(data.players, data.sessions, data.events);
+        toast("Players: " + result.players + ", Sessions: " + result.sessions + ", Events: " + result.events);
+        render();
+      }
+    }}}));
+  csvImport.appendChild(el("button",{cls:"btn",text:"Export CSVs",
+    on:{click:function(){
+      download("players.csv", playersCSV(), "text/csv;charset=utf-8");
+      download("sessions.csv", sessionsCSV(), "text/csv;charset=utf-8");
+      download("events.csv", eventsCSV(), "text/csv;charset=utf-8");
+      toast("3 CSVs downloaded");
+    }}}));
+  v.appendChild(csvImport);
+  if(!S.sessions.length){ v.appendChild(el("div",{cls:"empty",text:"Nothing recorded yet."})); return; }
+  S.sessions.forEach(function(sess){
+    var head = el("div",{cls:"row",style:"justify-content:space-between;gap:10px"});
+    var left = el("div",{});
+    left.appendChild(el("div",{},[
+      document.createTextNode(sess.kind === "game"
+        ? sess.teams[0].name + " vs " + sess.teams[1].name
+        : (sess.title || "Practice")),
+      el("span",{cls:"pill " + sess.kind,text:sess.kind})
+    ]));
+    left.appendChild(el("div",{style:"font-size:12px;color:var(--ink-3)",
+      text: new Date(sess.date).toLocaleDateString() + (sess.id === S.activeId ? " · open" : "")}));
+    head.appendChild(left);
+    if(sess.kind === "game"){
+      head.appendChild(el("div",{cls:"num",style:"font-size:20px;font-weight:500",
+        text: teamScore(sess,0) + "–" + teamScore(sess,1)}));
+    }
+    var card = el("div",{cls:"card"},[head]);
+    card.appendChild(el("div",{cls:"btns",style:"margin:12px 0 0"},[
+      el("button",{cls:"btn sm",text:"Open",on:{click:function(){
+        S.activeId = sess.id; UI.sel = null; UI.tab = "box"; save(); render(); }}}),
+      el("button",{cls:"btn sm",text:"CSV",on:{click:function(){
+        download("session-" + dstamp(sess.date) + ".csv", sessionCSV(sess), "text/csv;charset=utf-8"); }}}),
+      el("button",{cls:"btn sm danger",text:"Delete",on:{click:function(){
+        if(!confirm("Delete this session permanently?")) return;
+        S.sessions = S.sessions.filter(function(x){ return x.id !== sess.id; });
+        if(S.activeId === sess.id) S.activeId = S.sessions.length ? S.sessions[0].id : null;
+        save(); render(); }}})
+    ]));
+    v.appendChild(card);
+  });
+}
+
+/* ---------- players ---------- */
+function viewPlayers(v){
+  v.appendChild(el("h2",{text:"Players"}));
+  v.appendChild(el("p",{cls:"sub",text:"Entered once, kept forever. Aliases let one player answer to more than one spelling."}));
+  
+  var importExport = el("div",{cls:"btns noprint",style:"margin-bottom:14px"});
+  importExport.appendChild(el("button",{cls:"btn",text:"Import players CSV",
+    on:{click:function(){
+      var inp = document.createElement("input");
+      inp.type="file"; inp.accept=".csv";
+      inp.onchange = function(){
+        var f = inp.files[0]; if(!f) return;
+        var r = new FileReader();
+        r.onload = function(){
+          var n = importPlayersCSV(r.result);
+          save(); render();
+          toast(n + " player" + (n===1?"":"s") + " imported");
+        };
+        r.readAsText(f);
+      };
+      inp.click();
+    }}}));
+  importExport.appendChild(el("button",{cls:"btn",text:"Export players CSV",
+    on:{click:function(){
+      download("players-" + dstamp(Date.now()) + ".csv", playersCSV(), "text/csv;charset=utf-8");
+    }}}));
+  v.appendChild(importExport);
+  
+  var form = el("div",{cls:"card"});
+  var nm = el("input",{type:"text",placeholder:"Name",id:"newName"});
+  var ds = el("input",{type:"text",placeholder:"Descriptor (optional) — e.g. tall jersey"});
+  var al = el("input",{type:"text",placeholder:"Aliases, comma separated (optional)"});
+  form.appendChild(el("label",{cls:"f",text:"Add a player"}));
+  [nm,ds,al].forEach(function(x){ form.appendChild(x); form.appendChild(el("div",{style:"height:8px"})); });
+  form.appendChild(el("button",{cls:"btn solid wide",text:"Add player",on:{click:function(){
+    var name = nm.value.trim();
+    if(!name){ toast("Name required"); return; }
+    S.players.push({ id:uid("p"), name:name, desc:ds.value.trim(),
+      aliases: al.value.split(",").map(function(s){ return s.trim(); }).filter(Boolean),
+      num:"", notes:"", active:true });
+    nm.value = ds.value = al.value = "";
+    save(); render(); toast(name + " added");
+  }}}));
+  v.appendChild(form);
+
+  if(!S.players.length){ v.appendChild(el("div",{cls:"empty",text:"No players yet."})); return; }
+  S.players.forEach(function(p){
+    var card = el("div",{cls:"card"});
+    var nmi = el("input",{type:"text",value:p.name});
+    nmi.addEventListener("input", function(){ p.name = nmi.value; save(); });
+    var dsi = el("input",{type:"text",value:p.desc||"",placeholder:"Descriptor"});
+    dsi.addEventListener("input", function(){ p.desc = dsi.value; save(); });
+    var ali = el("input",{type:"text",value:(p.aliases||[]).join(", "),placeholder:"Aliases"});
+    ali.addEventListener("input", function(){
+      p.aliases = ali.value.split(",").map(function(s){ return s.trim(); }).filter(Boolean); save(); });
+    var nti = el("textarea",{placeholder:"Notes"});
+    nti.value = p.notes || "";
+    nti.addEventListener("input", function(){ p.notes = nti.value; save(); });
+    [nmi,dsi,ali,nti].forEach(function(x){ card.appendChild(x); card.appendChild(el("div",{style:"height:8px"})); });
+    card.appendChild(el("div",{cls:"btns",style:"margin:2px 0 0"},[
+      el("button",{cls:"btn sm",text:"Report card",on:{click:function(){
+        UI.card = p.id; UI.tab = "card"; render(); }}}),
+      el("button",{cls:"btn sm danger",text:"Remove",on:{click:function(){
+        var used = S.sessions.some(function(s){ return s.events.some(function(e){ return e.pid === p.id; }); });
+        if(used){ toast("Has recorded stats — can't remove"); return; }
+        if(!confirm("Remove " + p.name + "?")) return;
+        S.players = S.players.filter(function(x){ return x.id !== p.id; });
+        save(); render(); }}})
+    ]));
+    v.appendChild(card);
+  });
+}
+
+/* ---------- stat catalog ---------- */
+function viewStats(v){
+  v.appendChild(el("h2",{text:"Stats"}));
+  v.appendChild(el("p",{cls:"sub",text:"Switch a stat off to hide it from the bench and the tables — anything already recorded is kept."}));
+  ["game","practice"].forEach(function(scope){
+    v.appendChild(el("h3",{text: scope === "game" ? "In game" : "Practice"}));
+    var chips = el("div",{cls:"chips",style:"margin-bottom:12px"});
+    statsIn(scope, false).forEach(function(s){
+      var b = el("button",{cls:"chip","aria-pressed": s.on ? "true":"false",
+        on:{click:function(){ s.on = !s.on; save(); render(); }}});
+      b.appendChild(el("span",{cls:"ck",text: s.on ? "✓" : "+"}));
+      b.appendChild(document.createTextNode(s.label));
+      chips.appendChild(b);
+    });
+    v.appendChild(chips);
+  });
+  var f = el("div",{cls:"card"});
+  f.appendChild(el("label",{cls:"f",text:"Add a stat"}));
+  var lbl = el("input",{type:"text",placeholder:"Label — e.g. Lane agility",id:"newStat"});
+  var scope = el("select"); scope.innerHTML = '<option value="game">In game</option><option value="practice">Practice</option>';
+  var kind = el("select");
+  kind.innerHTML = '<option value="count">Count — tally it up</option>' +
+                   '<option value="measure">Measure — a number, higher is better</option>' +
+                   '<option value="time">Time — a number, lower is better</option>';
+  var unit = el("input",{type:"text",placeholder:"Unit (optional) — in, s, /10"});
+  var pts = el("input",{type:"number",placeholder:"Points each (scoring stats only)"});
+  [lbl,scope,kind,unit,pts].forEach(function(x){ f.appendChild(x); f.appendChild(el("div",{style:"height:8px"})); });
+  f.appendChild(el("button",{cls:"btn solid wide",text:"Add stat",on:{click:function(){
+    var label = lbl.value.trim();
+    if(!label){ toast("Label required"); return; }
+    var key = label.toUpperCase().replace(/[^A-Z0-9]/g,"").slice(0,6);
+    if(!key) key = "K" + S.stats.length;
+    if(S.stats.some(function(s){ return s.key === key; })) key = key + S.stats.length;
+    var p = parseInt(pts.value,10);
+    S.stats.push({ key:key, label:label, short:key, kind:kind.value, scope:scope.value,
+      unit:unit.value.trim() || null, lowerBetter: kind.value === "time",
+      pts: isNaN(p) ? null : p, on:true });
+    lbl.value = unit.value = pts.value = "";
+    save(); render(); toast(label + " added");
+  }}}));
+  v.appendChild(f);
+}
+
+/* ---------- report card ---------- */
+function viewCard(v){
+  v.appendChild(el("h2",{text:"Report card"}));
+  if(!S.players.length){ v.appendChild(el("div",{cls:"empty",text:"No players yet."})); return; }
+  var pid = UI.card || S.players[0].id;
+  var sel = el("select");
+  sel.innerHTML = S.players.map(function(p){
+    return '<option value="'+p.id+'"'+(p.id===pid?' selected':'')+'>'+p.name+'</option>'; }).join("");
+  sel.onchange = function(){ UI.card = sel.value; render(); };
+  v.appendChild(el("div",{cls:"card"},[el("label",{cls:"f",text:"Player"}), sel]));
+  var p = player(pid); if(!p) return;
+
+  var games = S.sessions.filter(function(s){ return s.kind === "game" && sessionPlayerIds(s).indexOf(pid) > -1; });
+  var pracs = S.sessions.filter(function(s){ return s.kind === "practice" && (s.playerIds||[]).indexOf(pid) > -1; });
+
+  v.appendChild(el("div",{cls:"tteam h",text:"Games — " + games.length + " played"}));
+  if(games.length){
+    var cols = gameCols(), agg = {}, pts = 0;
+    games.forEach(function(s){
+      var m = totalsFor(s)[pid] || {};
+      pts += pointsOf(m);
+      cols.forEach(function(c){ agg[c.key] = (agg[c.key]||0) + (m[c.key]||0); });
+    });
+    var tbl = el("table");
+    tbl.innerHTML = "<thead><tr><th>Stat</th><th>Total</th><th>Per game</th></tr></thead>";
+    var tb = el("tbody");
+    var addRow = function(label, total){
+      tb.appendChild(el("tr",{},[ el("td",{text:label}),
+        el("td",{cls:"num",text:String(total)}),
+        el("td",{cls:"num",text:(total/games.length).toFixed(1)}) ]));
+    };
+    addRow("Points", pts);
+    cols.forEach(function(c){ addRow(c.label, agg[c.key]||0); });
+    tbl.appendChild(tb);
+    v.appendChild(el("div",{cls:"tw"},[tbl]));
+  } else { v.appendChild(el("p",{cls:"sub",text:"No games yet."})); }
+
+  v.appendChild(el("div",{cls:"tteam p",text:"Practice — " + pracs.length + " sessions"}));
+  if(pracs.length){
+    var tbl2 = el("table");
+    tbl2.innerHTML = "<thead><tr><th>Drill</th><th>Best</th><th>Latest</th><th>Change</th></tr></thead>";
+    var tb2 = el("tbody"), any = false;
+    statsIn("practice", true).forEach(function(s){
+      var all = [], first = null, last = null;
+      pracs.slice().reverse().forEach(function(sess){
+        var m = totalsFor(sess)[pid] || {};
+        (m[s.key]||[]).forEach(function(x){ all.push(x); if(first === null) first = x; last = x; });
+      });
+      if(!all.length) return;
+      any = true;
+      var delta = all.length > 1 ? last - first : null;
+      var better = delta === null || delta === 0 ? "" :
+        ((s.lowerBetter ? delta < 0 : delta > 0) ? " better" : " worse");
+      tb2.appendChild(el("tr",{},[
+        el("td",{text:s.label}),
+        el("td",{cls:"num",text:fmtVal(s, bestOf(s, all))}),
+        el("td",{cls:"num",text:fmtVal(s, last)}),
+        el("td",{cls:"num",text: delta === null ? "—" :
+          ((delta > 0 ? "+" : "") + Math.round(delta*100)/100 + better)})
+      ]));
+    });
+    tbl2.appendChild(tb2);
+    if(any) v.appendChild(el("div",{cls:"tw"},[tbl2]));
+    else v.appendChild(el("p",{cls:"sub",text:"No measurements recorded yet."}));
+  } else { v.appendChild(el("p",{cls:"sub",text:"No practice sessions yet."})); }
+
+  if(p.notes){ v.appendChild(el("h3",{text:"Notes"})); v.appendChild(el("p",{cls:"sub",text:p.notes})); }
+  v.appendChild(el("div",{cls:"btns noprint",style:"margin-top:18px"},[
+    el("button",{cls:"btn",text:"Export CSV",on:{click:function(){
+      download("reportcard-" + p.name.replace(/\W+/g,"-").toLowerCase() + ".csv",
+        cardCSV(pid), "text/csv;charset=utf-8"); }}}),
+    el("button",{cls:"btn",text:"Print",on:{click:function(){ window.print(); }}})
+  ]));
+}
+
+/* ---------- export ---------- */
+function dstamp(t){ return new Date(t).toISOString().slice(0,10); }
+function csvCell(v){
+  v = String(v == null ? "" : v);
+  return /[",\n]/.test(v) ? '"' + v.replace(/"/g,'""') + '"' : v;
+}
+function toCSV(rows){ return rows.map(function(r){ return r.map(csvCell).join(","); }).join("\n"); }
+function download(name, text, mime){
+  var b = new Blob([text], { type: mime || "text/plain;charset=utf-8" });
+  var u = URL.createObjectURL(b);
+  var a = document.createElement("a");
+  a.href = u; a.download = name; document.body.appendChild(a); a.click();
+  setTimeout(function(){ URL.revokeObjectURL(u); a.remove(); }, 800);
+}
+function sessionCSV(sess){
+  var rows = [["J17 Youth Basketball Academy"]];
+  var tot = totalsFor(sess);
+  if(sess.kind === "game"){
+    var cols = gameCols();
+    rows.push([sess.teams[0].name + " vs " + sess.teams[1].name]);
+    rows.push([dstamp(sess.date)]);
+    rows.push([]);
+    sess.teams.forEach(function(t, ti){
+      rows.push([t.name, "tracked " + teamScore(sess,ti),
+        sess.finalScore[ti] === null ? "" : "official " + sess.finalScore[ti]]);
+      rows.push(["Player","PTS"].concat(cols.map(function(c){ return c.short; })));
+      t.playerIds.forEach(function(pid){
+        var m = tot[pid] || {};
+        rows.push([pname(pid), pointsOf(m)].concat(cols.map(function(c){ return m[c.key] || 0; })));
+      });
+      rows.push([]);
+    });
+  } else {
+    var ps = statsIn("practice", true);
+    rows.push([sess.title || "Practice"]);
+    rows.push([dstamp(sess.date)]);
+    rows.push([]);
+    rows.push(["Player"].concat(ps.map(function(s){
+      return s.short + (s.unit ? " (" + s.unit + ")" : ""); })));
+    (sess.playerIds||[]).forEach(function(pid){
+      var m = tot[pid] || {};
+      rows.push([pname(pid)].concat(ps.map(function(s){
+        var b = bestOf(s, m[s.key]); return b === null ? "" : b; })));
+    });
+  }
+  if(sess.notes){ rows.push([]); rows.push(["Notes", sess.notes]); }
+  return toCSV(rows);
+}
+function cardCSV(pid){
+  var p = player(pid);
+  var rows = [["Report card", p.name], [dstamp(Date.now())], []];
+  var games = S.sessions.filter(function(s){ return s.kind === "game" && sessionPlayerIds(s).indexOf(pid) > -1; });
+  rows.push(["Games played", games.length]);
+  var cols = gameCols(), agg = {}, pts = 0;
+  games.forEach(function(s){
+    var m = totalsFor(s)[pid] || {};
+    pts += pointsOf(m);
+    cols.forEach(function(c){ agg[c.key] = (agg[c.key]||0) + (m[c.key]||0); });
+  });
+  rows.push(["Stat","Total","Per game"]);
+  rows.push(["Points", pts, games.length ? (pts/games.length).toFixed(1) : ""]);
+  cols.forEach(function(c){
+    rows.push([c.label, agg[c.key]||0, games.length ? ((agg[c.key]||0)/games.length).toFixed(1) : ""]);
+  });
+  rows.push([]);
+  rows.push(["Drill","Best","Latest","Attempts"]);
+  statsIn("practice", true).forEach(function(s){
+    var all = [], last = null;
+    S.sessions.filter(function(x){ return x.kind === "practice"; }).slice().reverse().forEach(function(sess){
+      var m = totalsFor(sess)[pid] || {};
+      (m[s.key]||[]).forEach(function(x){ all.push(x); last = x; });
+    });
+    if(all.length) rows.push([s.label, bestOf(s, all), last, all.length]);
+  });
+  if(p.notes){ rows.push([]); rows.push(["Notes", p.notes]); }
+  return toCSV(rows);
+}
+function importBackup(){
+  var inp = document.createElement("input");
+  inp.type = "file"; inp.accept = ".json,application/json";
+  inp.onchange = function(){
+    var f = inp.files && inp.files[0]; if(!f) return;
+    var r = new FileReader();
+    r.onload = function(){
+      try{
+        var d = JSON.parse(r.result);
+        if(d && d.v > SCHEMA){ toast("That backup is from a newer version of the app"); return; }
+        if(d && d.games && !d.sessions){ d = migrateV1(d); }
+        if(!d || !d.sessions) throw new Error("bad");
+        d = upgrade(d);
+        var havePlayers = {}; S.players.forEach(function(p){ havePlayers[p.id] = true; });
+        d.players.forEach(function(p){ if(!havePlayers[p.id]) S.players.push(p); });
+        var haveStats = {}; S.stats.forEach(function(s){ haveStats[s.key] = true; });
+        d.stats.forEach(function(s){ if(!haveStats[s.key]) S.stats.push(s); });
+        var have = {}; S.sessions.forEach(function(s){ have[s.id] = true; });
+        var added = 0;
+        d.sessions.forEach(function(s){ if(!have[s.id]){ S.sessions.push(s); added++; } });
+        S.sessions.sort(function(a,b){ return b.date - a.date; });
+        save(); render();
+        toast(added + " session" + (added===1?"":"s") + " added");
+      }catch(e){ toast("That file isn't a Stat Book backup"); }
+    };
+    r.readAsText(f);
+  };
+  inp.click();
+}
+
+
+/* ---------- csv import/export ---------- */
+function parseCSV(text){
+  var lines = text.trim().split("\n");
+  if(!lines.length) return [];
+  var header = [];
+  var cells = splitCSVLine(lines[0]);
+  cells.forEach(h => header.push(h.trim()));
+  var rows = [];
+  for(var i = 1; i < lines.length; i++){
+    var cells = splitCSVLine(lines[i]);
+    var obj = {};
+    header.forEach((h, j) => { obj[h] = (cells[j]||"").trim(); });
+    if(Object.values(obj).some(v => v)) rows.push(obj);
+  }
+  return rows;
+}
+function splitCSVLine(line){
+  var cells = [], current = "", inQuotes = false;
+  for(var i = 0; i < line.length; i++){
+    var c = line[i];
+    if(c === '"' && (i === 0 || line[i-1] === ",") ){
+      inQuotes = !inQuotes;
+    } else if(c === '"' && inQuotes && i+1 < line.length && line[i+1] === '"'){
+      current += '"'; i++;
+    } else if(c === "," && !inQuotes){
+      cells.push(current);
+      current = "";
+    } else {
+      current += c;
+    }
+  }
+  cells.push(current);
+  return cells;
+}
+function toCSVLine(vals){
+  return vals.map(v => {
+    v = String(v == null ? "" : v);
+    return /[",\n]/.test(v) ? '"' + v.replace(/"/g,'""') + '"' : v;
+  }).join(",");
+}
+function playersCSV(){
+  var rows = [["id","name","desc","aliases","notes"]];
+  S.players.forEach(p => {
+    rows.push([p.id, p.name, p.desc||"", (p.aliases||[]).join("; "), p.notes||""]);
+  });
+  return rows.map(r => toCSVLine(r)).join("\n");
+}
+function sessionsCSV(){
+  var rows = [["id","date","kind","format","title","team1_name","team1_players","team2_name","team2_players","final_score_1","final_score_2","notes"]];
+  S.sessions.forEach(s => {
+    if(s.kind === "game"){
+      rows.push([
+        s.id, s.date, s.kind, s.format, s.title||"",
+        s.teams[0].name, s.teams[0].playerIds.join("|"),
+        s.teams[1].name, s.teams[1].playerIds.join("|"),
+        s.finalScore[0]||"", s.finalScore[1]||"",
+        s.notes||""
+      ]);
+    } else {
+      rows.push([s.id, s.date, s.kind, "", s.title||"", "", s.playerIds.join("|"), "", "", "", "", s.notes||""]);
+    }
+  });
+  return rows.map(r => toCSVLine(r)).join("\n");
+}
+function eventsCSV(){
+  var rows = [["id","session_id","player_id","stat_key","value","period","team","timestamp"]];
+  S.sessions.forEach(s => {
+    s.events.forEach(e => {
+      rows.push([e.id, s.id, e.pid, e.key, e.v||1, e.period||"", e.team !== null && e.team !== undefined ? e.team : "", e.t]);
+    });
+  });
+  return rows.map(r => toCSVLine(r)).join("\n");
+}
+function importPlayersCSV(text){
+  var rows = parseCSV(text);
+  var added = 0;
+  rows.forEach(row => {
+    var found = S.players.some(p => p.id === row.id);
+    if(!found){
+      S.players.push({
+        id: row.id,
+        name: row.name || "Unnamed",
+        desc: row.desc || "",
+        aliases: (row.aliases||"").split(";").map(a => a.trim()).filter(Boolean),
+        notes: row.notes || "",
+        active: true
+      });
+      added++;
+    }
+  });
+  return added;
+}
+function importSessionsCSV(text){
+  var rows = parseCSV(text);
+  var added = 0;
+  rows.forEach(row => {
+    var found = S.sessions.some(s => s.id === row.id);
+    if(!found){
+      var sess = {
+        id: row.id,
+        date: parseInt(row.date, 10),
+        kind: row.kind,
+        format: row.format || "quarters",
+        title: row.title || "",
+        period: row.kind === "game" ? "Q1" : "",
+        done: false,
+        teams: row.kind === "game" ? [
+          { name: row.team1_name || "Team 1", playerIds: (row.team1_players||"").split("|").filter(Boolean) },
+          { name: row.team2_name || "Team 2", playerIds: (row.team2_players||"").split("|").filter(Boolean) }
+        ] : [],
+        playerIds: row.kind === "practice" ? (row.team1_players||"").split("|").filter(Boolean) : [],
+        finalScore: row.kind === "game" ? [
+          row.final_score_1 ? parseInt(row.final_score_1, 10) : null,
+          row.final_score_2 ? parseInt(row.final_score_2, 10) : null
+        ] : [null, null],
+        events: [],
+        notes: row.notes || ""
+      };
+      S.sessions.push(sess);
+      added++;
+    }
+  });
+  return added;
+}
+function importEventsCSV(text){
+  var rows = parseCSV(text);
+  var added = 0;
+  rows.forEach(row => {
+    var sess = S.sessions.find(s => s.id === row.session_id);
+    if(sess){
+      var found = sess.events.some(e => e.id === row.id);
+      if(!found){
+        sess.events.push({
+          id: row.id,
+          t: parseInt(row.timestamp, 10),
+          sid: row.session_id,
+          pid: row.player_id,
+          key: row.stat_key,
+          v: row.value ? parseFloat(row.value) : 1,
+          period: row.period || null,
+          team: row.team === "" || row.team === null ? null : parseInt(row.team, 10)
+        });
+        added++;
+      }
+    }
+  });
+  return added;
+}
+function importFromCSVs(playerText, sessionText, eventText){
+  var p = importPlayersCSV(playerText || "");
+  var s = importSessionsCSV(sessionText || "");
+  var e = importEventsCSV(eventText || "");
+  S.sessions.sort((a,b) => b.date - a.date);
+  save();
+  return { players: p, sessions: s, events: e };
+}
+
+/* ---------- boot ---------- */
+load();
+if(!S.activeId && S.sessions.length) S.activeId = S.sessions[0].id;
+render();
+document.addEventListener("keydown", function(e){
+  if((e.ctrlKey || e.metaKey) && e.key === "z"){ e.preventDefault(); undoLast(); }
+});
+
+</script>
+</body>
+</html>

@@ -1,0 +1,30 @@
+id,name,short,group_size,measure,unit,better,out_of,time_limit_s,description,active,stage_number,stage_name,stage_measure,stage_unit,stage_better,stage_out_of,stage_time_limit_s
+40de0bb5-c106-4074-a7f1-268348d9bdbf,Double crossover pass between the chairs,DXPASS,1,time,seconds,lower,none,none,"Timed: double crossover between the chairs, then the pass",true,1,Double crossover pass between the chairs,time,seconds,lower,none,none
+746207c5-fdde-413d-8a24-14c06b152642,Two-ball combine,2BALL,1,time,seconds,lower,none,none,Timed two-ball dribbling course,true,1,Two-ball combine,time,seconds,lower,none,none
+2da636eb-04cc-40d0-8699-1f74e4978117,Agility and speed combine,AGSPD,1,time,seconds,lower,none,none,"Agility then speed, recorded together",true,1,Lane agility,time,seconds,lower,none,none
+2da636eb-04cc-40d0-8699-1f74e4978117,Agility and speed combine,AGSPD,1,time,seconds,lower,none,none,"Agility then speed, recorded together",true,2,Full-court sprint,time,seconds,lower,none,none
+1420248b-9092-4c57-82cd-fae407230b0a,Strength combine,STRGTH,1,count,reps,higher,none,none,PLACEHOLDER stations - replace with yours,true,1,Push-ups,count,reps,higher,none,60
+1420248b-9092-4c57-82cd-fae407230b0a,Strength combine,STRGTH,1,count,reps,higher,none,none,PLACEHOLDER stations - replace with yours,true,2,Sit-ups,count,reps,higher,none,60
+1420248b-9092-4c57-82cd-fae407230b0a,Strength combine,STRGTH,1,count,reps,higher,none,none,PLACEHOLDER stations - replace with yours,true,3,Plank hold,time,seconds,higher,none,none
+b2b57b81-26fe-4c3c-813c-1e9ba9ebb0d4,Shooting efficiency,SHOTEF,1,makes,makes,higher,10,none,Makes out of 10 shots,true,1,Shooting efficiency,makes,makes,higher,10,none
+872cb0ec-86be-4a6e-ba03-b9b48c292040,Overall skills combine with shooting,SKLSHT,1,time,seconds,lower,none,none,"Ball-handling course, then shooting",true,1,Ball-handling course,time,seconds,lower,none,none
+872cb0ec-86be-4a6e-ba03-b9b48c292040,Overall skills combine with shooting,SKLSHT,1,time,seconds,lower,none,none,"Ball-handling course, then shooting",true,2,Shooting,makes,makes,higher,10,none
+18e6193f-b70f-4209-88ca-98703d7d9c84,Free-throw accuracy,FTACC,1,makes,makes,higher,10,none,Makes out of 10 free throws,true,1,Free-throw accuracy,makes,makes,higher,10,none
+7fe8099e-3e92-49e3-82ad-bea42e409ee5,Free-throw proficiency,FTPRO,1,count,makes,higher,none,60,Free-throw makes in 60 seconds,true,1,Free-throw proficiency,count,makes,higher,none,60
+d528148c-0471-451e-ab65-372e5449647e,Long-range shooting accuracy,LRACC,1,makes,makes,higher,10,none,Makes out of 10 from long range,true,1,Long-range shooting accuracy,makes,makes,higher,10,none
+ad64f5b6-e2d7-4cba-b191-ecba593b65da,Long-range shooting proficiency,LRPRO,1,count,makes,higher,none,60,Long-range makes in 60 seconds,true,1,Long-range shooting proficiency,count,makes,higher,none,60
+8e9597bc-8b4e-4e9c-99c4-fce1406df98c,Shooting off the dribble,OTD,1,makes,makes,higher,10,none,Makes out of 10 off the dribble,true,1,Shooting off the dribble,makes,makes,higher,10,none
+8d590269-8dae-4cb9-8a17-117b4494d92a,Long-range shooting off the dribble,LROTD,1,makes,makes,higher,10,none,Long-range makes out of 10 off the dribble,true,1,Long-range shooting off the dribble,makes,makes,higher,10,none
+5f4689c4-41c9-4853-b13a-dc731ece23e9,Defensive stance / ready position,STANCE,1,rating,BEG/INT/AVG/ADV/ELT,higher,none,none,none,true,1,Defensive stance / ready position,rating,BEG/INT/AVG/ADV/ELT,higher,none,none
+837c2b4b-731d-43b4-9a65-02a4db3c7eb1,Overall balance,BALNC,1,rating,BEG/INT/AVG/ADV/ELT,higher,none,none,none,true,1,Overall balance,rating,BEG/INT/AVG/ADV/ELT,higher,none,none
+a31ea1f6-add5-4d41-8429-2bce5ca06eb8,Defensive aggressiveness,DAGGR,1,rating,BEG/INT/AVG/ADV/ELT,higher,none,none,none,true,1,Defensive aggressiveness,rating,BEG/INT/AVG/ADV/ELT,higher,none,none
+b7312536-df95-48fc-b4a8-bc322c521d84,Rebounding,REBND,1,rating,BEG/INT/AVG/ADV/ELT,higher,none,none,none,true,1,Rebounding,rating,BEG/INT/AVG/ADV/ELT,higher,none,none
+7d459321-fef3-4cfb-a610-83e3eb3fd3c6,Boxing out,BOXOUT,1,rating,BEG/INT/AVG/ADV/ELT,higher,none,none,none,true,1,Boxing out,rating,BEG/INT/AVG/ADV/ELT,higher,none,none
+895c8398-8226-4d25-87f7-ab9828b0c135,Speed to the ball,SPDBAL,1,time,seconds,lower,none,none,Timed from start signal to the ball,true,1,Speed to the ball,time,seconds,lower,none,none
+7315b92e-516b-41cc-a80e-f2453e89dc28,Help-side awareness,HELPSD,1,rating,BEG/INT/AVG/ADV/ELT,higher,none,none,none,true,1,Help-side awareness,rating,BEG/INT/AVG/ADV/ELT,higher,none,none
+51e5b9b5-e42e-47fe-81f6-947421b931f6,Team communication,COMMS,1,rating,BEG/INT/AVG/ADV/ELT,higher,none,none,none,true,1,Team communication,rating,BEG/INT/AVG/ADV/ELT,higher,none,none
+b1806e8c-3f69-48d4-9001-9e418ec41711,Full-court defense,FCDEF,1,rating,BEG/INT/AVG/ADV/ELT,higher,none,none,none,true,1,Full-court defense,rating,BEG/INT/AVG/ADV/ELT,higher,none,none
+afe7ca54-4805-47e7-a896-972ad974377a,Zone defense awareness,ZONE,1,rating,BEG/INT/AVG/ADV/ELT,higher,none,none,none,true,1,Zone defense awareness,rating,BEG/INT/AVG/ADV/ELT,higher,none,none
+48778816-6a82-4917-a565-749c2400949d,Overall defensive awareness,DAWARE,1,rating,BEG/INT/AVG/ADV/ELT,higher,none,none,none,true,1,Overall defensive awareness,rating,BEG/INT/AVG/ADV/ELT,higher,none,none
+d7bbe0ba-72ee-46e2-9ccb-fef8b63ca89c,Court awareness,CRTAWR,1,rating,BEG/INT/AVG/ADV/ELT,higher,none,none,none,true,1,Court awareness,rating,BEG/INT/AVG/ADV/ELT,higher,none,none
+a6d91e04-c9f9-422a-8d4e-640e995d95f1,Game awareness,GMAWR,1,rating,BEG/INT/AVG/ADV/ELT,higher,none,none,none,true,1,Game awareness,rating,BEG/INT/AVG/ADV/ELT,higher,none,none

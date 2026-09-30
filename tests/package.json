@@ -1,0 +1,15 @@
+{
+  "name": "j17-statbook-tests",
+  "version": "4.9.0",
+  "private": true,
+  "description": "Tests for the J17 Stat Book. Runs against ../latest/index.html unless STATBOOK points elsewhere.",
+  "scripts": {
+    "test": "node test-regress.js && node test-grid.js && node test-csv.js && node test-custom-stats.js && node test-v41.js && node test-v42.js && node test-v43.js && node test-v44.js && node test-v46.js && node test-v47.js && node test-v471.js && node test-v48.js && node test-v49.js && node sample-data-test.js"
+  },
+  "dependencies": {
+    "jsdom": "^30.1.0"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}
