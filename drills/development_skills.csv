@@ -1,0 +1,103 @@
+id,name,short,group_size,measure,unit,better,out_of,time_limit_s,description,active,stage_number,stage_name,stage_measure,stage_unit,stage_better,stage_out_of,stage_time_limit_s,area
+7e420e4f-3d55-4140-bd11-44a09bcf80a3,Stationary dribbling,BH01,1,count,reps,higher,none,30,none,FALSE,none,none,none,none,none,none,none,Ball handling
+fe7a26a1-d320-400b-bdd6-6ee089ff6cbc,Right-hand and left-hand control,BH02,1,rating,BEG/INT/AVG/ADV/ELT,higher,none,none,none,FALSE,none,none,none,none,none,none,none,Ball handling
+0d0f1056-7ca5-4a12-86ac-b2632eb5fff8,Crossover dribble,BH03,1,rating,BEG/INT/AVG/ADV/ELT,higher,none,none,none,FALSE,none,none,none,none,none,none,none,Ball handling
+16c47178-87ca-44c1-bd23-ee0625bbb388,Between-the-legs dribble,BH04,1,rating,BEG/INT/AVG/ADV/ELT,higher,none,none,none,FALSE,none,none,none,none,none,none,none,Ball handling
+59594047-4a24-4178-8f5b-b4f6cf2be9de,Behind-the-back dribble,BH05,1,rating,BEG/INT/AVG/ADV/ELT,higher,none,none,none,FALSE,none,none,none,none,none,none,none,Ball handling
+52a5c653-fd87-4021-a9e0-d9cda8d0f9f4,Hesitation dribble,BH06,1,rating,BEG/INT/AVG/ADV/ELT,higher,none,none,none,FALSE,none,none,none,none,none,none,none,Ball handling
+f21d9eff-0961-413c-94a2-e2b5cba06857,Speed dribbling,BH07,1,time,seconds,lower,none,none,none,FALSE,none,none,none,none,none,none,none,Ball handling
+9bc733cf-4e89-49fe-920c-1edc663e2509,Change of pace,BH08,1,rating,BEG/INT/AVG/ADV/ELT,higher,none,none,none,FALSE,none,none,none,none,none,none,none,Ball handling
+ddf48e8f-348c-4af8-ab8f-d3c515fa12f4,Change of direction with the ball,BH09,1,rating,BEG/INT/AVG/ADV/ELT,higher,none,none,none,FALSE,none,none,none,none,none,none,none,Ball handling
+28eaad38-b154-4a51-82f1-a6bca33afdf0,Protecting the basketball,BH10,1,rating,BEG/INT/AVG/ADV/ELT,higher,none,none,none,FALSE,none,none,none,none,none,none,none,Ball handling
+f9bd8015-a75c-4097-9dcc-3ea927470140,Dribbling under pressure,BH11,1,rating,BEG/INT/AVG/ADV/ELT,higher,none,none,none,FALSE,none,none,none,none,none,none,none,Ball handling
+70fb1bd1-e255-4460-958c-29b76c5cb5e7,Advancing the ball against pressure,BH12,1,rating,BEG/INT/AVG/ADV/ELT,higher,none,none,none,FALSE,none,none,none,none,none,none,none,Ball handling
+536a53d1-8fd5-46ca-be0a-a14b657d5c16,Proper shooting mechanics,SH01,1,rating,BEG/INT/AVG/ADV/ELT,higher,none,none,none,FALSE,none,none,none,none,none,none,none,Shooting
+b03dc9b8-6229-4315-be14-f60e48c8b057,Shooting hand placement,SH02,1,rating,BEG/INT/AVG/ADV/ELT,higher,none,none,none,FALSE,none,none,none,none,none,none,none,Shooting
+2d8a5279-57b4-440f-96eb-1f93e137c74b,Balance and foot positioning,SH03,1,rating,BEG/INT/AVG/ADV/ELT,higher,none,none,none,FALSE,none,none,none,none,none,none,none,Shooting
+5eabf4e7-3cb6-4ee8-af1e-0bd99c005d48,Follow-through,SH04,1,rating,BEG/INT/AVG/ADV/ELT,higher,none,none,none,FALSE,none,none,none,none,none,none,none,Shooting
+badc0d5c-f913-4b65-907b-b4fe6dd3df95,Form shooting,SH05,1,count,makes,higher,none,60,none,FALSE,none,none,none,none,none,none,none,Shooting
+87fc52a2-5d6d-4944-a2b8-d92ea9eaddf0,Set shots,SH06,1,makes,makes,higher,10,none,none,FALSE,none,none,none,none,none,none,none,Shooting
+a9dce2d3-3263-4553-85ea-a0fe83c3aa1f,Jump shots,SH07,1,makes,makes,higher,10,none,none,FALSE,none,none,none,none,none,none,none,Shooting
+d44015d9-5f50-4c8d-b274-5300ef679d60,Catch-and-shoot,SH08,1,makes,makes,higher,10,none,none,FALSE,none,none,none,none,none,none,none,Shooting
+d105e193-684f-46f0-93c9-c0b544946b22,Shooting off the dribble,SH09,1,makes,makes,higher,10,none,none,FALSE,none,none,none,none,none,none,none,Shooting
+f08799ec-412b-47a6-a834-3962bf50a88a,Layups (right and left hand),SH10,1,makes,makes,higher,10,none,none,FALSE,none,none,none,none,none,none,none,Shooting
+7f79430c-7f81-4061-b0d3-d05e0e12906a,Floaters,SH11,1,makes,makes,higher,10,none,none,FALSE,none,none,none,none,none,none,none,Shooting
+747cf821-0cc5-4bbf-89c3-e5f365068483,Pull-up jump shots,SH12,1,makes,makes,higher,10,none,none,FALSE,none,none,none,none,none,none,none,Shooting
+071cb449-28ea-4e67-a16a-ef86ac9527e4,Free throws,SH13,1,makes,makes,higher,10,none,none,FALSE,none,none,none,none,none,none,none,Shooting
+b1c8f710-48b1-4f86-8c94-c6fe531877f4,Finishing through contact,SH14,1,rating,BEG/INT/AVG/ADV/ELT,higher,none,none,none,FALSE,none,none,none,none,none,none,none,Shooting
+0861dbac-787c-4efb-bbd0-b5837ddf6942,Chest pass,PS01,1,rating,BEG/INT/AVG/ADV/ELT,higher,none,none,none,FALSE,none,none,none,none,none,none,none,Passing
+1324f4e2-88d0-4641-9a31-e895387dfc7a,Bounce pass,PS02,1,rating,BEG/INT/AVG/ADV/ELT,higher,none,none,none,FALSE,none,none,none,none,none,none,none,Passing
+316e4792-35a3-46f4-b80b-9f23d2decee2,Overhead pass,PS03,1,rating,BEG/INT/AVG/ADV/ELT,higher,none,none,none,FALSE,none,none,none,none,none,none,none,Passing
+9c2a6391-36a3-4faf-9ea1-6584ceb2a5bf,One-hand pass,PS04,1,rating,BEG/INT/AVG/ADV/ELT,higher,none,none,none,FALSE,none,none,none,none,none,none,none,Passing
+930202e6-b9b6-4335-b50d-f1e62df92194,Baseball pass,PS05,1,rating,BEG/INT/AVG/ADV/ELT,higher,none,none,none,FALSE,none,none,none,none,none,none,none,Passing
+4293eca5-b8f4-45af-8a88-cfd0154fe845,Push pass,PS06,1,rating,BEG/INT/AVG/ADV/ELT,higher,none,none,none,FALSE,none,none,none,none,none,none,none,Passing
+bc8671cf-9eca-47a6-be90-9a7d7ba18485,Passing off the dribble,PS07,1,rating,BEG/INT/AVG/ADV/ELT,higher,none,none,none,FALSE,none,none,none,none,none,none,none,Passing
+00b9bb3c-1920-425d-9df4-7b8e05960567,Passing with either hand,PS08,1,rating,BEG/INT/AVG/ADV/ELT,higher,none,none,none,FALSE,none,none,none,none,none,none,none,Passing
+7a64bb7f-06d6-45fd-9f7c-bf4db4faea22,Passing under pressure,PS09,1,rating,BEG/INT/AVG/ADV/ELT,higher,none,none,none,FALSE,none,none,none,none,none,none,none,Passing
+014c76fc-0e09-4b3d-8382-f88a85c37339,Reading passing lanes,PS10,1,rating,BEG/INT/AVG/ADV/ELT,higher,none,none,none,FALSE,none,none,none,none,none,none,none,Passing
+719fda80-b635-4392-8815-ffb67ce653f1,Timing and accuracy,PS11,1,makes,makes,higher,10,none,none,FALSE,none,none,none,none,none,none,none,Passing
+c6efe88e-b471-4fb2-83ea-c224148fecaf,Making the correct pass,PS12,1,rating,BEG/INT/AVG/ADV/ELT,higher,none,none,none,FALSE,none,none,none,none,none,none,none,Passing
+1bea6ef6-d285-465f-8bc6-a41fdc4cfb32,Athletic stance,FB01,1,rating,BEG/INT/AVG/ADV/ELT,higher,none,none,none,FALSE,none,none,none,none,none,none,none,Footwork and body control
+4a80d1b8-e9fc-4346-9380-36d618ba8683,Triple-threat position,FB02,1,rating,BEG/INT/AVG/ADV/ELT,higher,none,none,none,FALSE,none,none,none,none,none,none,none,Footwork and body control
+c9c8dd27-d6b2-45f2-a0c9-5aa4e49b7a0e,Jump stops,FB03,1,rating,BEG/INT/AVG/ADV/ELT,higher,none,none,none,FALSE,none,none,none,none,none,none,none,Footwork and body control
+772e57cc-0669-4626-8bc2-2cc9420847fe,Stride stops,FB04,1,rating,BEG/INT/AVG/ADV/ELT,higher,none,none,none,FALSE,none,none,none,none,none,none,none,Footwork and body control
+8457bde9-023b-4f53-88f5-72a777fc9a4b,Front pivot,FB05,1,rating,BEG/INT/AVG/ADV/ELT,higher,none,none,none,FALSE,none,none,none,none,none,none,none,Footwork and body control
+09e11343-35d6-4125-b09d-b54aaa31da79,Reverse pivot,FB06,1,rating,BEG/INT/AVG/ADV/ELT,higher,none,none,none,FALSE,none,none,none,none,none,none,none,Footwork and body control
+cd76e078-7a07-4f1b-ab75-0856d8cc96bf,Drop steps,FB07,1,rating,BEG/INT/AVG/ADV/ELT,higher,none,none,none,FALSE,none,none,none,none,none,none,none,Footwork and body control
+e93fac55-77e1-46f5-b808-48a23b595a45,Jab steps,FB08,1,rating,BEG/INT/AVG/ADV/ELT,higher,none,none,none,FALSE,none,none,none,none,none,none,none,Footwork and body control
+10deb67c-36c5-411a-a3f6-dc8d8ae5b80a,Defensive slides (footwork),FB09,1,count,reps,higher,none,30,none,FALSE,none,none,none,none,none,none,none,Footwork and body control
+2d19bb2a-d903-484a-b9c1-53b03855d619,Change of direction on the feet,FB10,1,time,seconds,lower,none,none,none,FALSE,none,none,none,none,none,none,none,Footwork and body control
+055ba936-6c61-40ea-b969-0744644360c9,Balance and coordination,FB11,1,rating,BEG/INT/AVG/ADV/ELT,higher,none,none,none,FALSE,none,none,none,none,none,none,none,Footwork and body control
+0869e791-3fc2-414d-8cc0-0f80064d6915,Landing mechanics,FB12,1,rating,BEG/INT/AVG/ADV/ELT,higher,none,none,none,FALSE,none,none,none,none,none,none,none,Footwork and body control
+918341c3-316f-4a76-837c-be1019b77e23,Explosive first step,FB13,1,time,seconds,lower,none,none,none,FALSE,none,none,none,none,none,none,none,Footwork and body control
+b83ccbc7-aefd-47ca-8d6d-c0c479f4fe6c,Right-hand layups,FN01,1,makes,makes,higher,10,none,none,FALSE,none,none,none,none,none,none,none,Finishing and scoring
+7ab508ef-21b1-498e-918c-0e877377667f,Left-hand layups,FN02,1,makes,makes,higher,10,none,none,FALSE,none,none,none,none,none,none,none,Finishing and scoring
+bdd0ca1a-1152-4070-8c4e-14a7f1f5f01e,Reverse layups,FN03,1,makes,makes,higher,10,none,none,FALSE,none,none,none,none,none,none,none,Finishing and scoring
+ed5e83d5-fb29-4072-88cb-a9d6c85b91fc,Euro step,FN04,1,makes,makes,higher,10,none,none,FALSE,none,none,none,none,none,none,none,Finishing and scoring
+5b16c03f-1e0c-4093-b23b-c1be8aa43991,Two-foot finishes,FN05,1,rating,BEG/INT/AVG/ADV/ELT,higher,none,none,none,FALSE,none,none,none,none,none,none,none,Finishing and scoring
+8090b993-5324-418d-b664-5c1d1120e5e2,One-foot finishes,FN06,1,rating,BEG/INT/AVG/ADV/ELT,higher,none,none,none,FALSE,none,none,none,none,none,none,none,Finishing and scoring
+d432c69b-8d3d-48f8-940d-ba29de103e57,Power finishes,FN07,1,rating,BEG/INT/AVG/ADV/ELT,higher,none,none,none,FALSE,none,none,none,none,none,none,none,Finishing and scoring
+6fa61b1c-4e05-4c5d-83a1-a90d57938ff8,Finishing with contact,FN08,1,rating,BEG/INT/AVG/ADV/ELT,higher,none,none,none,FALSE,none,none,none,none,none,none,none,Finishing and scoring
+cdee5b36-f8c9-4e38-8063-f4bf75cff52e,Finishing around defenders,FN09,1,rating,BEG/INT/AVG/ADV/ELT,higher,none,none,none,FALSE,none,none,none,none,none,none,none,Finishing and scoring
+2f1873d0-9ac7-421a-b4a2-cabcb8538aae,Finishing with either hand,FN10,1,rating,BEG/INT/AVG/ADV/ELT,higher,none,none,none,FALSE,none,none,none,none,none,none,none,Finishing and scoring
+b5317409-23fa-458e-8507-189840174ac3,Reading the shot blocker,FN11,1,rating,BEG/INT/AVG/ADV/ELT,higher,none,none,none,FALSE,none,none,none,none,none,none,none,Finishing and scoring
+71dc9413-b6b5-40e9-8bea-2bc0827d2f04,Scoring in transition,FN12,1,rating,BEG/INT/AVG/ADV/ELT,higher,none,none,none,FALSE,none,none,none,none,none,none,none,Finishing and scoring
+862024ff-5e77-4aad-a4e9-3a4f26f3fc18,Defensive stance,DF01,1,rating,BEG/INT/AVG/ADV/ELT,higher,none,none,none,FALSE,none,none,none,none,none,none,none,Individual defence
+fe0edb40-15f2-41c2-b5fb-a805551867e4,Lateral movement,DF02,1,rating,BEG/INT/AVG/ADV/ELT,higher,none,none,none,FALSE,none,none,none,none,none,none,none,Individual defence
+b6cafe8c-6039-4500-9bfe-daf1d5175220,Defensive slides (defence),DF03,1,rating,BEG/INT/AVG/ADV/ELT,higher,none,none,none,FALSE,none,none,none,none,none,none,none,Individual defence
+88fc254a-01a7-4309-807d-cb933e1ca96f,Closeouts,DF04,1,rating,BEG/INT/AVG/ADV/ELT,higher,none,none,none,FALSE,none,none,none,none,none,none,none,Individual defence
+a24d6cdd-d0ad-43b9-80bc-323acad53157,Staying in front of the ball,DF05,1,rating,BEG/INT/AVG/ADV/ELT,higher,none,none,none,FALSE,none,none,none,none,none,none,none,Individual defence
+40be3527-89a4-4c69-be7c-d6d5cba4225c,On-ball pressure,DF06,1,rating,BEG/INT/AVG/ADV/ELT,higher,none,none,none,FALSE,none,none,none,none,none,none,none,Individual defence
+20af7bb9-76b0-45e3-aa7f-6afe726e76ac,Contesting shots,DF07,1,rating,BEG/INT/AVG/ADV/ELT,higher,none,none,none,FALSE,none,none,none,none,none,none,none,Individual defence
+ece4af7d-1c50-45ec-989f-e16798cb1d63,Defending without fouling,DF08,1,rating,BEG/INT/AVG/ADV/ELT,higher,none,none,none,FALSE,none,none,none,none,none,none,none,Individual defence
+3e38ca2b-c532-4ca7-b40b-5dd49428498b,Denying passing lanes,DF09,1,rating,BEG/INT/AVG/ADV/ELT,higher,none,none,none,FALSE,none,none,none,none,none,none,none,Individual defence
+fa3406bb-1aa9-4550-899c-3926f1b9719a,Defensive positioning,DF10,1,rating,BEG/INT/AVG/ADV/ELT,higher,none,none,none,FALSE,none,none,none,none,none,none,none,Individual defence
+0b396729-9db4-4c7a-a15c-ce3c3ac162af,Recovering after being beaten,DF11,1,rating,BEG/INT/AVG/ADV/ELT,higher,none,none,none,FALSE,none,none,none,none,none,none,none,Individual defence
+40a78210-abf5-4bbd-9a84-556ed5d7906e,Boxing out,DF12,1,rating,BEG/INT/AVG/ADV/ELT,higher,none,none,none,FALSE,none,none,none,none,none,none,none,Individual defence
+2520da29-6424-406a-ac29-4d99328b3f1f,Defensive communication,DF13,1,rating,BEG/INT/AVG/ADV/ELT,higher,none,none,none,FALSE,none,none,none,none,none,none,none,Individual defence
+0357668d-a4a3-4d03-8a76-cb4c407f97e6,Understanding spacing,IQ01,1,rating,BEG/INT/AVG/ADV/ELT,higher,none,none,none,FALSE,none,none,none,none,none,none,none,Basketball IQ and court awareness
+2767731a-201a-41b6-9e89-708131db91d3,Reading the defence,IQ02,1,rating,BEG/INT/AVG/ADV/ELT,higher,none,none,none,FALSE,none,none,none,none,none,none,none,Basketball IQ and court awareness
+afd030c0-b481-4862-b0a7-87e387947c83,Recognizing offensive opportunities,IQ03,1,rating,BEG/INT/AVG/ADV/ELT,higher,none,none,none,FALSE,none,none,none,none,none,none,none,Basketball IQ and court awareness
+e8cf50d0-7779-454f-94f9-b0f642180eef,Recognizing defensive threats,IQ04,1,rating,BEG/INT/AVG/ADV/ELT,higher,none,none,none,FALSE,none,none,none,none,none,none,none,Basketball IQ and court awareness
+8cddb291-7132-4cb9-915e-b6892c845f93,Knowing when to pass,IQ05,1,rating,BEG/INT/AVG/ADV/ELT,higher,none,none,none,FALSE,none,none,none,none,none,none,none,Basketball IQ and court awareness
+e51a9ac1-2b9c-4599-983d-04256938ece5,Knowing when to shoot,IQ06,1,rating,BEG/INT/AVG/ADV/ELT,higher,none,none,none,FALSE,none,none,none,none,none,none,none,Basketball IQ and court awareness
+d3b4f8ef-5822-41d9-9922-86fc9e789b02,Knowing when to attack,IQ07,1,rating,BEG/INT/AVG/ADV/ELT,higher,none,none,none,FALSE,none,none,none,none,none,none,none,Basketball IQ and court awareness
+c14e3b04-29b1-4db4-95f1-15e5f6d69894,Off-ball movement,IQ08,1,rating,BEG/INT/AVG/ADV/ELT,higher,none,none,none,FALSE,none,none,none,none,none,none,none,Basketball IQ and court awareness
+a4cead18-c4f9-40f9-963c-b898fd2e49ec,Cutting and relocating,IQ09,1,rating,BEG/INT/AVG/ADV/ELT,higher,none,none,none,FALSE,none,none,none,none,none,none,none,Basketball IQ and court awareness
+58f58ec9-722b-46f9-943a-324527224330,Understanding help defence,IQ10,1,rating,BEG/INT/AVG/ADV/ELT,higher,none,none,none,FALSE,none,none,none,none,none,none,none,Basketball IQ and court awareness
+b97fdc4e-2a61-40e1-bd12-c0195c76b0a4,Understanding rotations,IQ11,1,rating,BEG/INT/AVG/ADV/ELT,higher,none,none,none,FALSE,none,none,none,none,none,none,none,Basketball IQ and court awareness
+e8650e66-a0cf-411b-ac17-447c0e945079,Transition decision-making,IQ12,1,rating,BEG/INT/AVG/ADV/ELT,higher,none,none,none,FALSE,none,none,none,none,none,none,none,Basketball IQ and court awareness
+73f88e5f-e843-4df6-8b05-6b16d84df4e2,Recognizing mismatches,IQ13,1,rating,BEG/INT/AVG/ADV/ELT,higher,none,none,none,FALSE,none,none,none,none,none,none,none,Basketball IQ and court awareness
+96556165-4292-40b0-b79f-b9fd843558a9,Decision-making under pressure,IQ14,1,rating,BEG/INT/AVG/ADV/ELT,higher,none,none,none,FALSE,none,none,none,none,none,none,none,Basketball IQ and court awareness
+a23fae9a-b992-494e-827a-bc7b82469bea,Speed,AT01,1,time,seconds,lower,none,none,none,FALSE,none,none,none,none,none,none,none,Athleticism and physical development
+f2018ff6-2cd5-44d9-9225-5ad329b5338b,Acceleration,AT02,1,time,seconds,lower,none,none,none,FALSE,none,none,none,none,none,none,none,Athleticism and physical development
+617af0a2-e8b2-499f-bcfe-628951376297,Agility,AT03,1,time,seconds,lower,none,none,none,FALSE,none,none,none,none,none,none,none,Athleticism and physical development
+c6e8301f-aa47-4810-b16b-d54564b3eaf2,Explosiveness,AT04,1,number,cm,higher,none,none,none,FALSE,none,none,none,none,none,none,none,Athleticism and physical development
+b841eaa4-a446-4ab5-afbb-a25aa2c241a4,Balance,AT05,1,time,seconds,higher,none,none,none,FALSE,none,none,none,none,none,none,none,Athleticism and physical development
+c4e4df59-6323-4291-bcc3-a081df63a3f8,Coordination,AT06,1,rating,BEG/INT/AVG/ADV/ELT,higher,none,none,none,FALSE,none,none,none,none,none,none,none,Athleticism and physical development
+edf5d892-82be-4b54-a403-ed1b6f1f3798,Core strength,AT07,1,time,seconds,higher,none,none,none,FALSE,none,none,none,none,none,none,none,Athleticism and physical development
+40d8c295-b4a3-4136-8173-8d6695fd5996,Lower-body strength,AT08,1,number,kg,higher,none,none,none,FALSE,none,none,none,none,none,none,none,Athleticism and physical development
+eb7724e7-6dc4-4bed-88a6-4b0e632df64c,Upper-body strength,AT09,1,count,reps,higher,none,60,none,FALSE,none,none,none,none,none,none,none,Athleticism and physical development
+4d9e1f64-a0e1-471f-8cfd-7d3abe6b6381,Stamina and conditioning,AT10,1,time,seconds,lower,none,none,none,FALSE,none,none,none,none,none,none,none,Athleticism and physical development
+d174fa79-e452-4b85-bf30-ce5a2896f7fe,Reaction time,AT11,1,time,seconds,lower,none,none,none,FALSE,none,none,none,none,none,none,none,Athleticism and physical development
+890d22fb-8b45-41c6-95f7-df38e673e15e,Body control,AT12,1,rating,BEG/INT/AVG/ADV/ELT,higher,none,none,none,FALSE,none,none,none,none,none,none,none,Athleticism and physical development

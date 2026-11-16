@@ -24,9 +24,12 @@ function practice(w) {
   return w.activeSession();
 }
 function card(w) { return w.document.querySelector(".drillcard"); }
+// v4.11: the picker is grouped chips inside collapsible areas; tap the chip for the drill
 function choose(w, name) {
-  var sel = card(w).querySelector("select");
-  sel.value = drill(w, name).id; sel.dispatchEvent(new w.Event("change"));
+  var chip = Array.from(card(w).querySelectorAll(".areas .chip")).filter(function(b) {
+    return b.textContent === name || b.textContent.indexOf(name + " (") === 0;
+  })[0];
+  chip.click();
 }
 function button(root, text) {
   return Array.from(root.querySelectorAll("button")).filter(function(b) { return b.textContent.trim() === text; })[0];
@@ -122,10 +125,10 @@ function type(w, input, v) { input.value = v; input.dispatchEvent(new w.Event("i
 (function() {
   var w = newApp(); practice(w); w.render();
   ok("drills card without imports shows the built-in group drills as chips",
-     !card(w).querySelector("select") && card(w).querySelectorAll(".chip").length === 2);
+     !card(w).querySelector("select") && card(w).querySelectorAll(".areas .chip").length === 2);
   ok("import button there", !!button(card(w), "Import drills CSV"));
   w.importDrillsCSV(DRILLS); w.render();
-  ok("27 drills: a dropdown instead of chips", !!card(w).querySelector("select"));
+  ok("27 drills: grouped into collapsible areas, no dropdown (v4.11)", !card(w).querySelector("select") && card(w).querySelectorAll("details.area").length >= 1);
 
   choose(w, "Help-side awareness");
   var rows = card(w).querySelectorAll(".brow");

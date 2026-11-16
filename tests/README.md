@@ -1,6 +1,6 @@
 # Stat Book tests
 
-665 checks in 14 files. Needs Node 22 or later (jsdom 30). Each file loads the app in a simulated browser (jsdom)
+886 checks in 17 files. Needs Node 22 or later (jsdom 30). Each file loads the app in a simulated browser (jsdom)
 and drives it through its own functions and buttons.
 
 ## Run
@@ -29,7 +29,10 @@ node test-v46.js                           # one file
 | test-v47.js | 75 | drill catalog, group and multi-stage attempts, caps, drills and attempts CSV |
 | test-v471.js | 49 | possessions and points per possession, O/D rebound split, one-time upgrade |
 | test-v48.js | 63 | drills import (the real drills.csv), time/count/makes/rating, notes, one-pass entry, export round trip |
-| test-v49.js | 45 | lineups of any size, minutes across periods, plus/minus, version on screen, Clear all players, team-heading imports (replaces test-v45) |
+| test-v49.js | 56 | lineups of any size, minutes across periods and pauses, plus/minus, version on screen, Clear all players, team-heading imports (replaces test-v45) |
+| test-v410.js | 71 | opponent teams and players across games, new player wearing, merge, Team rows, add-player panel, quick edit |
+| test-v411.js | 50 | drill catalog of 200 with 60 on, on/off switches, areas and collapsible sections, 102-skill import, area column round trip, CSV-only picker |
+| test-v412.js | 89 | free throw misses and the one-time upgrade, on-court players first, bench header, sticky header hooks, turnover and block spots, assist pairing, assist_for in the events CSV |
 | sample-data-test.js | 12 | a season in miniature, end to end |
 
 `fixtures/` holds a fictional 20-player roster and three older builds (v4, v4.1,

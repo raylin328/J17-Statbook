@@ -55,7 +55,7 @@ ok("players CSV has Riley", playerCSV.indexOf("p1,Riley Park,,Miscellaneous,blac
 ok("sessions CSV has header", sessionCSV.split("\n")[0] === "id,date,kind,format,title,team1_name,team1_players,team2_name,team2_players,final_score_1,final_score_2,period_min,done,notes");
 ok("sessions CSV has the game", sessionCSV.indexOf("s1,1725360000000,game,quarters") > -1);
 ok("teams encoded as pipe-delimited", sessionCSV.indexOf("Black,p1|p2,White") > -1);
-ok("events CSV has header", eventCSV.split("\n")[0] === "id,session_id,player_id,stat_key,value,period,team,timestamp,made,x,y,clock");
+ok("events CSV has header", eventCSV.split("\n")[0] === "id,session_id,player_id,stat_key,value,period,team,timestamp,made,x,y,clock,assist_for");
 ok("events CSV has all 3 events", eventCSV.split("\n").length === 4);
 ok("event includes period and team", eventCSV.split("\n")[2].indexOf(",Q1,0,") > -1);
 

@@ -131,12 +131,12 @@ function statOn(w, key) { var s = w.S.stats.filter(function(x) { return x.key ==
   var heads = [].map.call(tbl.querySelectorAll("thead th"), function(e) { return e.textContent; });
   var row = [].map.call(tbl.querySelector("tbody tr").children, function(e) { return e.textContent; });
   var at = function(k) { return row[heads.indexOf(k)]; };
-  eq("box columns", heads.join("|"), "Player|PTS|2P|3P|1P|OREB|DREB|REB|AST|STL|BLK|PF|TO");
+  eq("box columns", heads.join("|"), "Player|PTS|2P|3P|1P|FTX|OREB|DREB|REB|AST|STL|BLK|PF|TO");
   eq("OREB cell", at("OREB"), "1");
   eq("DREB cell", at("DREB"), "1");
   eq("REB is the total, old plain REB included", at("REB"), "3");
   var csv = w.sessionCSV(s);
-  ok("session CSV carries the total", /Ari Kim,0,0,0,0,1,1,3/.test(csv), csv.split("\n").slice(4, 6).join(" | "));
+  ok("session CSV carries the total", /Ari Kim,0,0,0,0,0,1,1,3/.test(csv), csv.split("\n").slice(4, 6).join(" | "));
   var card = w.cardCSV("h1");
   ok("report card CSV totals rebounds, old REB included", /\nRebounds,3,3\.0/.test(card),
      card.split("\n").filter(function(l) { return /reb/i.test(l); }).join(" | "));
