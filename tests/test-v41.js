@@ -217,7 +217,7 @@ console.log("\n-- shot chart");
   // log
   A.ev("UI.tab='log'; render();");
   ok("log labels the miss", A.$("#view").textContent.indexOf("2-pointer (missed)") > -1);
-  ok("log marks charted shots", A.$("#view").textContent.indexOf("charted") > -1);
+  ok("log says where charted shots were from (a zone name since v4.13)", A.$("#view").textContent.indexOf("Left wing three") > -1);
 }
 
 /* ================= 3. game clock ================= */

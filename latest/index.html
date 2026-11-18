@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#16181C">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<title>J17 Stat Book 4.9</title>
+<title>J17 Stat Book 4.13</title>
 <style>
 :root{
   --page:#FAF9F6; --card:#FFFFFF; --ink:#14171A; --ink-2:#5B6169; --ink-3:#8B9198;
@@ -194,6 +194,43 @@ tfoot td{font-weight:500;border-top:2px solid var(--line-2);border-bottom:0}
     tr.bench, .plr.bench { opacity:.5; }
     tr.oncourt .nmcell b::before { content:"\25CF"; font-size:.65em; margin-right:5px; vertical-align:middle; }
     .plr.oncourt { box-shadow: inset 0 0 0 2px currentColor; }
+    /* v4.10: opponents, add and edit panels */
+    .oppbar { padding:10px 12px; margin:0 0 12px; }
+    .oppnum { width:96px; flex:0 0 96px; }
+    .addpanel, .editpanel { border-width:2px; }
+    .oppteam { font-weight:600; margin:12px 0 6px; }
+    .opprow { padding:4px 0; }
+    .opprow select { flex:0 1 180px; }
+    td.nmcell { cursor:pointer; }
+    /* v4.11: areas and manage drills */
+    details.area, details.manage { margin:6px 0; }
+    details summary { cursor:pointer; min-height:44px; display:flex; align-items:center; font-weight:600; }
+    details.area { border-top:1px solid var(--line-2); padding-top:4px; }
+    /* v4.12: sticky grid header, bench header */
+    .tw.fits { overflow:visible; }
+    .tapgrid thead th { padding-top:8px; padding-bottom:6px; }
+    .gridtw.fits .tapgrid thead th { position:sticky; top:var(--boardh, 0px); z-index:3; background:var(--page); }
+    .tapgrid .benchhead th { padding-top:14px; color:var(--ink-3); }
+    /* v4.12.2: the full court lies down, so its sheet is wider */
+    .sheet.widesheet { max-width:900px; }
+    /* v4.13: shot zones */
+    :root { --z1:#D9E7EA; --z2:#B0CDD3; --z3:#7FAEB7; --z4:#4F8E99; }
+    .zonemap .zone { fill:#fff; fill-opacity:0; stroke:var(--line-2); stroke-width:1; stroke-dasharray:4 3; }
+    .zonemap .zone.zf1 { fill:var(--z1); fill-opacity:1; } .zonemap .zone.zf2 { fill:var(--z2); fill-opacity:1; }
+    .zonemap .zone.zf3 { fill:var(--z3); fill-opacity:1; } .zonemap .zone.zf4 { fill:var(--z4); fill-opacity:1; }
+    .zonemap text { font-size:11.5px; fill:var(--ink-2); text-anchor:middle; pointer-events:none; }
+    .zonemap .zl.has { fill:var(--ink); }
+    .zonemap .zn { font-size:13px; font-weight:600; fill:var(--ink); }
+    .zonemap .pick { fill:none; stroke:var(--ink); stroke-width:2.5; pointer-events:none; }
+    .zkey { display:flex; flex-wrap:wrap; gap:6px 14px; align-items:center; font-size:12px; color:var(--ink-2); margin:10px 0 0; }
+    .zsw { display:inline-block; width:14px; height:14px; border-radius:3px; border:1px solid var(--line-2); margin-right:5px; vertical-align:-2px;
+           -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+    .zsw.zf1 { background:var(--z1); } .zsw.zf2 { background:var(--z2); } .zsw.zf3 { background:var(--z3); } .zsw.zf4 { background:var(--z4); }
+    .zonetable .zgroup td { font-weight:500; }
+    .zonetable .zsub td:first-child { padding-left:22px; color:var(--ink-2); }
+    .zonetable td:first-child { white-space:normal; }
+    @media print { .toast { display:none; } }
+    @media (max-width:520px){ .zonectl .grid2 { grid-template-columns:1fr; } }
   </style>
 </head>
 <body>
@@ -211,7 +248,7 @@ var OLDKEY = "j17.statbook.v1";
 var SCHEMA = 3;  // v3: typed stats, shot misses/positions, game clock
                  // v4.6 categories are additive to schema 3, NOT a bump: every version
                  // folder shares one localStorage, and older builds refuse newer schemas.
-var APP_VERSION = "4.9";
+var APP_VERSION = "4.13";
 
 /* ---------- state ---------- */
 var S = null;
@@ -248,7 +285,7 @@ function seedStats(){
     return { key:key, label:label, short:key, type:"integer", tally:true, scope:"game", pts:pts || null, on:on !== false };
   }
   return [
-    tally("2P","2-pointer",2), tally("3P","3-pointer",3), tally("1P","Free throw",1),
+    tally("2P","2-pointer",2), tally("3P","3-pointer",3), tally("1P","Free throw",1), tally("FTX","Free throw miss"),
     tally("OREB","Off. rebound"), tally("DREB","Def. rebound"), tally("AST","Assist"), tally("STL","Steal"),
     tally("BLK","Block"), tally("PF","Foul"), tally("TO","Turnover"),
     { key:"VERT", tally:false,   label:"Vertical jump",        short:"VERT", type:"float",   unit:"in",  better:"higher", scope:"practice", on:true },
@@ -347,8 +384,18 @@ function plusMinus(sess, ti){
 }
 function fmtMin(sec){ var t = Math.round(sec); return Math.floor(t / 60) + ":" + (t % 60 < 10 ? "0" : "") + (t % 60); }
 function fmtPM(v){ return v > 0 ? "+" + v : String(v); }
+// v4.12: with a lineup set, the players on the court come first, then the Team rows,
+// then the bench; roster order is kept inside each group. benchAt is where the bench
+// starts (-1 when there is no split to show).
+function courtOrder(sess, ti){
+  var ids = (sess.teams[ti].playerIds || []).slice();
+  if(!tracksLineup(sess, ti)) return { ids: ids, benchAt: -1 };
+  var on = onCourt(sess, ti), a = [], t = [], b = [];
+  ids.forEach(function(pid){ (on.indexOf(pid) > -1 ? a : isTeamRow(pid) ? t : b).push(pid); });
+  return { ids: a.concat(t, b), benchAt: (a.length && b.length) ? a.length + t.length : -1 };
+}
 function courtClass(sess, ti, pid){
-  if(!tracksLineup(sess, ti)) return "";
+  if(!tracksLineup(sess, ti) || isTeamRow(pid)) return "";
   return onCourt(sess, ti).indexOf(pid) > -1 ? " oncourt" : " bench";
 }
 // under the team tabs: who's on, and the Subs panel
@@ -367,6 +414,7 @@ function lineupStrip(sess){
       text:"Tap a player to put them on or take them off. Any number can be on the court."}));
     var chips = el("div",{cls:"chips"});
     (sess.teams[ti].playerIds || []).forEach(function(pid){
+      if(isTeamRow(pid)) return;
       chips.appendChild(el("button",{cls:"chip","aria-pressed": on.indexOf(pid) > -1 ? "true" : "false",
         text: label(pid), on:{click:function(){ toggleOnCourt(sess, ti, pid); render(); }}}));
     });
@@ -395,7 +443,7 @@ function betterOf(st){
 }
 function isShot(st){ return isTally(st) && (st.pts || 0) >= 2; }
 function blankState(){
-  return { v:SCHEMA, players:[], stats:seedStats(), sessions:[], activeId:null, shifts:[], prefs:{ gameView:"grid", possV1:true },
+  return { v:SCHEMA, players:[], oppTeams:[], opponents:[], stats:seedStats(), sessions:[], activeId:null, shifts:[], prefs:{ gameView:"grid", possV1:true },
            categories:seedCategories(), drills:seedDrills() };
 }
 function statByKey(k){
@@ -497,7 +545,8 @@ function mergeCategories(d){   // a restored backup may bring categories of its 
 var MAX_GROUP_SIZE = 5;
 var MAX_STAGES = 4;
 var MAX_VALUES = 20;
-var MAX_DRILLS = 60;
+var MAX_DRILLS = 200;        // everything saved in the drill list (on or off)
+var MAX_ACTIVE_DRILLS = 60;  // drills switched on at once: what practice shows
 // standard drills use fixed ids so they survive rename and mean the same in the DB
 var STD_DRILLS = [
   { id:"00000000-0000-4000-8000-0000000d0001", name:"Vertical jump",        short:"VERT", groupSize:1, unit:"in", better:"higher", stages:[] },
@@ -515,7 +564,7 @@ var STD_DRILLS = [
 STD_DRILLS[5].unit = "s"; STD_DRILLS[5].better = "lower";
 function seedDrills(){
   return STD_DRILLS.map(function(d, i){
-    return { id:d.id, name:d.name, short:d.short, groupSize:d.groupSize,
+    return { id:d.id, name:d.name, short:d.short, groupSize:d.groupSize, area:"Standard drills",
              unit:d.unit || null, better:d.better || null,
              stages:(d.stages || []).map(function(g){ return { name:g.name, unit:g.unit || null, better:g.better || null }; }),
              seeded:true, active:true, order:i + 1 };
@@ -534,6 +583,7 @@ function ensureDrills(d){
     if(cur.groupSize === undefined) cur.groupSize = std.groupSize;
     if(!Array.isArray(cur.stages)) cur.stages = std.stages.slice();
     if(cur.active === undefined) cur.active = true;
+    if(cur.area === undefined) cur.area = std.area;   // v4.11
   });
   // strip malformed entries and enforce caps on every drill
   d.drills = d.drills.filter(function(x){ return x && x.id && x.name; });
@@ -621,7 +671,7 @@ function stageHint(d, i){
    blanks filled, like the players import. A bad row skips its whole drill and
    the report says which row and why. Tabs work too, for sheets pasted in.   */
 var DRILL_COLS = ["id","name","short","group_size","measure","unit","better","out_of","time_limit_s","description",
-  "active","stage_number","stage_name","stage_measure","stage_unit","stage_better","stage_out_of","stage_time_limit_s"];
+  "active","stage_number","stage_name","stage_measure","stage_unit","stage_better","stage_out_of","stage_time_limit_s","area"];
 function importCell(v){
   var t = String(v == null ? "" : v).trim();
   return /^(none|n\/?a|null)$/i.test(t) ? "" : t;
@@ -679,10 +729,11 @@ function drillFromRows(rows){
     measure: measure, unit: f.unit || null, better: better || null,
     outOf: measure === "makes" ? (outOf || 10) : null, timeLimit: limit,
     description: f.description ? cleanNote(f.description, 400).value : "",
-    stages: stages, active: f.active ? /^(true|yes|y|1)$/i.test(f.active) : true } };
+    stages: stages, active: f.active ? /^(true|yes|y|1)$/i.test(f.active) : true,
+    area: f.area ? (cleanLabel(f.area, 40).value || "") : "" } };
 }
 function importDrillsCSV(text){
-  var rows = importTable(text), rep = { added: 0, updated: 0, same: 0, skipped: [] };
+  var rows = importTable(text), rep = { added: 0, updated: 0, same: 0, off: [], skipped: [] };
   var head = (rows[0] || []).map(function(h){ return String(h).trim().toLowerCase().replace(/\s+/g, "_"); });
   if(head.indexOf("name") < 0 || head.indexOf("measure") < 0){
     rep.skipped.push({ row: 1, why: "this doesn't look like a drills file (it needs name and measure columns)" });
@@ -707,7 +758,7 @@ function importDrillsCSV(text){
     var have = drillById(d.id) || (S.drills || []).filter(function(x){ return x.name.toLowerCase() === key; })[0];
     if(have){
       var changed = false;
-      ["measure", "unit", "better", "outOf", "timeLimit", "description"].forEach(function(k){
+      ["measure", "unit", "better", "outOf", "timeLimit", "description", "area"].forEach(function(k){
         if(isBlank(have[k]) && !isBlank(d[k])){ have[k] = d[k]; changed = true; }
       });
       // a single "stage 1" row is the drill itself; only a real combine adds stages
@@ -720,6 +771,9 @@ function importDrillsCSV(text){
       return;
     }
     d.order = ++order;
+    if(isOn(d) && activeDrillCount() >= MAX_ACTIVE_DRILLS){   // saved, but off until one is turned off
+      d.active = false; rep.off.push(d.name);
+    }
     S.drills.push(d); rep.added++;
   });
   save();
@@ -969,6 +1023,18 @@ function upgrade(d){
     d.stats.forEach(function(st){ if(st.key === "TO" || st.key === "OREB" || st.key === "DREB") st.on = true; });
     d.prefs.possV1 = true;
   }
+  // v4.12, once: missed free throws get their own column, right after the makes.
+  // Turning it off or deleting it later is kept.
+  if(!d.prefs.ftxV1){
+    if(!d.stats.some(function(st){ return st.key === "FTX"; })){
+      var ftx = seedStats().filter(function(st){ return st.key === "FTX"; })[0], at1 = -1;
+      d.stats.forEach(function(st, i){ if(st.key === "1P") at1 = i; });
+      if(at1 < 0) d.stats.push(ftx); else d.stats.splice(at1 + 1, 0, ftx);
+    }
+    d.prefs.ftxV1 = true;
+  }
+  if(!Array.isArray(d.oppTeams)) d.oppTeams = [];     // v4.10
+  if(!Array.isArray(d.opponents)) d.opponents = [];
   // later: if(d.v === 3){ ...; d.v = 4; }
   ensureCategories(d);   // v4.6, additive: players without a valid category -> Miscellaneous
   ensureDrills(d);       // v4.7, additive: seed the drill catalog if it is missing
@@ -1033,13 +1099,313 @@ function activeSession(){
   for(var i=0;i<S.sessions.length;i++){ if(S.sessions[i].id === S.activeId) return S.sessions[i]; }
   return null;
 }
+/* ---------- opponents and Team rows (v4.10) ----------
+   Opponent teams (S.oppTeams: {id, name}) and their players (S.opponents:
+   {id, team, num, name, desc, retired}) are kept apart from the roster, so the
+   Players tab, categories, imports and the roster export never see them. A
+   player is known by team + jersey number and keeps one id across games.
+   "New player wearing #33" starts a new id from this game on; merge joins two
+   ids that turn out to be the same kid. Team rows ("Team") take the plays
+   nobody caught the number for; there is one per side.
+   Lookups go through player(), which checks all three.                       */
+var TEAM_ROWS = ["00000000-0000-4000-8000-0000000f0001", "00000000-0000-4000-8000-0000000f0002"];
+function isTeamRow(pid){ return TEAM_ROWS.indexOf(pid) > -1; }
+function teamRowPlayer(pid){ return { id: pid, name: "Team", num: "", desc: "", aliases: [], active: true, teamRow: true }; }
 function player(pid){
   for(var i=0;i<S.players.length;i++){ if(S.players[i].id === pid) return S.players[i]; }
+  var o = S.opponents || [];
+  for(var j=0;j<o.length;j++){ if(o[j].id === pid) return o[j]; }
+  if(isTeamRow(pid)) return teamRowPlayer(pid);
   return null;
 }
-function pname(pid){ var p = player(pid); return p ? p.name : "?"; }
+/* ---------- on/off and areas (v4.11) ----------
+   Every drill is saved; only the ones switched on show in practice, and at most
+   MAX_ACTIVE_DRILLS can be on at once. Areas (Ball handling, Shooting, ...) group
+   the list into collapsible sections. Drills with no area go under "Other".    */
+function isOn(d){ return d.active !== false; }
+function activeDrillCount(){ return (S.drills || []).filter(isOn).length; }
+function areaOf(d){ return d.area || "Other"; }
+function drillAreas(list){
+  var out = [], seen = {};
+  list.slice().sort(function(a, b){ return (a.order || 0) - (b.order || 0); }).forEach(function(d){
+    var a = areaOf(d);
+    if(!seen[a]){ seen[a] = []; out.push({ name: a, drills: seen[a] }); }
+    seen[a].push(d);
+  });
+  return out;
+}
+function setDrillOn(d, on){
+  if(on && !isOn(d) && activeDrillCount() >= MAX_ACTIVE_DRILLS)
+    return { error: "All " + MAX_ACTIVE_DRILLS + " drills are on. Turn one off first." };
+  d.active = !!on; save();
+  return { ok: true };
+}
+function oppTeamById(id){ return (S.oppTeams || []).filter(function(t){ return t.id === id; })[0] || null; }
+function oppPlayersOf(teamId){ return (S.opponents || []).filter(function(p){ return p.team === teamId; }); }
+function byJersey(a, b){ return (parseInt(a.num, 10) || 0) - (parseInt(b.num, 10) || 0) || String(a.num).length - String(b.num).length; }
+function addOppTeam(name){
+  var nm = cleanLabel(name, 60).value;
+  if(!S.oppTeams) S.oppTeams = [];
+  var have = S.oppTeams.filter(function(t){ return t.name.toLowerCase() === nm.toLowerCase(); })[0];
+  if(have) return have;
+  var t = { id: uid("t"), name: nm };
+  S.oppTeams.push(t); save();
+  return t;
+}
+function addOppByNumber(sess, ti, raw){
+  var side = sess.teams[ti];
+  if(!side.opp) return { msg: "This side isn't an opponent team" };
+  var j = cleanJersey(raw);
+  if(j.error) return { msg: cap(j.error) };
+  if(!j.value) return { msg: "Type the jersey number" };
+  if(!S.opponents) S.opponents = [];
+  var p = oppPlayersOf(side.opp).filter(function(x){ return !x.retired && x.num === j.value; })[0];
+  if(p && side.playerIds.indexOf(p.id) > -1) return { msg: "#" + j.value + " is already in" };
+  if(!p){
+    p = { id: uid("o"), team: side.opp, num: j.value, name: "", desc: "", aliases: [], active: true };
+    S.opponents.push(p);
+  }
+  side.playerIds.push(p.id); save();
+  return { ok: true, player: p, msg: benchName(p) + " added" };
+}
+function dedupeIds(a){ return a.filter(function(x, i){ return a.indexOf(x) === i; }); }
+function replacePid(sess, from, to){
+  (sess.teams || []).forEach(function(t){ t.playerIds = dedupeIds((t.playerIds || []).map(function(x){ return x === from ? to : x; })); });
+  if(sess.playerIds) sess.playerIds = dedupeIds(sess.playerIds.map(function(x){ return x === from ? to : x; }));
+  (sess.events || []).forEach(function(e){ if(e.pid === from) e.pid = to; });
+  (sess.lineups || []).forEach(function(l){ l.on = dedupeIds(l.on.map(function(x){ return x === from ? to : x; })); });
+  (sess.attempts || []).forEach(function(a){ a.pids = a.pids.map(function(x){ return x === from ? to : x; }); });
+}
+// the kid wearing #33 today isn't the #33 from before: new id from this game on
+function newOppInNumber(sess, ti, raw){
+  var side = sess.teams[ti], j = cleanJersey(raw);
+  if(j.error || !j.value) return { msg: "Type the jersey number" };
+  var old = side.playerIds.map(player).filter(function(p){ return p && p.team === side.opp && p.num === j.value; })[0];
+  if(!old) return { msg: "No #" + j.value + " in this game" };
+  var fresh = { id: uid("o"), team: side.opp, num: j.value, name: "", desc: "", aliases: [], active: true };
+  S.opponents.push(fresh); old.retired = true;
+  replacePid(sess, old.id, fresh.id);
+  save();
+  return { ok: true, player: fresh, msg: "New #" + j.value + " from this game on" };
+}
+// two ids that turn out to be the same kid become one, in every game
+function mergeOpponents(dropId, keepId){
+  var drop = player(dropId), keep = player(keepId);
+  if(dropId === keepId || !drop || !keep || !drop.team || !keep.team) return false;
+  S.sessions.forEach(function(x){ replacePid(x, dropId, keepId); });
+  if(!keep.name && drop.name) keep.name = drop.name;
+  if(!keep.desc && drop.desc) keep.desc = drop.desc;
+  S.opponents = S.opponents.filter(function(x){ return x.id !== dropId; });
+  save();
+  return true;
+}
+function addTeamRow(sess, ti){
+  var pid = TEAM_ROWS[ti];
+  if(sess.teams[ti].playerIds.indexOf(pid) < 0){ sess.teams[ti].playerIds.push(pid); save(); }
+}
+function renameOppTeam(t, name){
+  var r = cleanLabel(name, 60);
+  if(!r.value || r.error) return false;
+  t.name = r.value;
+  S.sessions.forEach(function(x){ (x.teams || []).forEach(function(side){ if(side.opp === t.id) side.name = t.name; }); });
+  save();
+  return true;
+}
+function opponentsCSV(){
+  var rows = [["id", "team_id", "team", "jersey", "name", "description", "retired"]];
+  (S.opponents || []).forEach(function(o){
+    var t = oppTeamById(o.team);
+    rows.push([o.id, o.team, t ? t.name : "", o.num || "", o.name || "", o.desc || "", o.retired ? "true" : "false"]
+      .map(function(v){ return noFormula(v); }));
+  });
+  return rows.map(toCSVLine).join("\n");
+}
+
+/* ---------- adding and editing players mid-session (v4.10) ---------- */
+function sessionIds(sess){ return sess.kind === "game" ? sess.teams[UI.team].playerIds : (sess.playerIds || []); }
+function addToSession(sess, pid){
+  var ids = sessionIds(sess);
+  if(ids.indexOf(pid) < 0) ids.push(pid);
+  save();
+}
+// roster players this session could take: not here yet, and not on the other side
+function addable(sess, q){
+  var taken = {};
+  if(sess.kind === "game") sess.teams.forEach(function(t){ t.playerIds.forEach(function(x){ taken[x] = true; }); });
+  else (sess.playerIds || []).forEach(function(x){ taken[x] = true; });
+  var k = String(q || "").trim().toLowerCase().replace(/^#/, "");
+  return S.players.filter(function(p){
+    if(taken[p.id] || p.active === false) return false;
+    if(!k) return true;
+    return p.name.toLowerCase().indexOf(k) > -1 || String(p.num || "") === k ||
+      (p.aliases || []).some(function(a){ return String(a).toLowerCase().indexOf(k) > -1; });
+  }).sort(function(a, b){ return a.name.localeCompare(b.name); });
+}
+function addNewPlayer(sess, f){
+  var nm = cleanPlayerName(f.name);
+  if(!nm.value) return { error: "Type a name" };
+  if(nm.error) return { error: cap(nm.error) };
+  var j = cleanJersey(f.num);
+  if(j.error) return { error: cap(j.error) };
+  var same = S.players.filter(function(p){ return nameKey(p.name) === nameKey(nm.value); });
+  if(same.length && !f.sameNameOk) return { same: same[0] };
+  var p = { id: uid("p"), name: nm.value, num: j.value, desc: "", aliases: [], notes: "", active: true,
+            cat: f.cat && catById(f.cat) ? f.cat : MISC_ID };
+  S.players.push(p);
+  addToSession(sess, p.id);
+  return { player: p };
+}
+function addPanel(sess){
+  if(!UI.adding) return null;
+  var game = sess.kind === "game", side = game ? sess.teams[UI.team] : null;
+  var card = el("div",{cls:"card addpanel"}), head = el("div",{cls:"lurow"});
+  head.appendChild(el("h3",{style:"margin:0",text: game ? "Add a player to " + side.name : "Add a player to this practice"}));
+  head.appendChild(el("button",{cls:"btn sm",text:"Close",on:{click:function(){ UI.adding = null; render(); }}}));
+  card.appendChild(head);
+  if(game && side.opp){ card.appendChild(oppAddRow(sess, UI.team)); return card; }
+  var q = el("input",{type:"text",enterkeyhint:"search",placeholder:"Search by name or number",value:UI.adding.q || "",
+                      "aria-label":"Search your players",style:"margin-top:10px"});
+  var results = el("div",{cls:"chips addres",style:"margin:8px 0 14px"});
+  var fill = function(){
+    results.innerHTML = "";
+    var list = addable(sess, UI.adding.q);
+    list.slice(0, 16).forEach(function(p){
+      results.appendChild(el("button",{cls:"chip",text:"+ " + benchName(p),on:{click:function(){
+        addToSession(sess, p.id); toast(p.name + " added"); UI.adding = null; render(); }}}));
+    });
+    if(!list.length) results.appendChild(el("span",{cls:"sub",text: UI.adding.q ? "No one in your roster matches." : "Everyone in your roster is already here."}));
+    else if(list.length > 16) results.appendChild(el("span",{cls:"sub",text:"+" + (list.length - 16) + " more \u2014 keep typing"}));
+  };
+  q.addEventListener("input", function(){ UI.adding.q = q.value; fill(); });   // no full render: keeps the keyboard up
+  card.appendChild(q); card.appendChild(results); fill();
+  card.appendChild(el("label",{cls:"f",text:"Or someone new"}));
+  var f = UI.adding.form || (UI.adding.form = { name: "", num: "", cat: MISC_ID });
+  var nmIn = el("input",{type:"text",placeholder:"Name",value:f.name,"aria-label":"New player's name"});
+  nmIn.addEventListener("input", function(){ f.name = nmIn.value; f.sameNameOk = false; });
+  var jIn = el("input",{type:"text",inputmode:"numeric",placeholder:"Jersey #",value:f.num,"aria-label":"Jersey number",cls:"oppnum"});
+  jIn.addEventListener("input", function(){ f.num = jIn.value; });
+  var cSel = el("select",{"aria-label":"Category"});
+  (S.categories || []).forEach(function(c){ var o = document.createElement("option"); o.value = c.id; o.textContent = c.name; cSel.appendChild(o); });
+  cSel.value = f.cat; cSel.addEventListener("change", function(){ f.cat = cSel.value; });
+  var row = el("div",{cls:"bctl"},[jIn, cSel]);
+  card.appendChild(nmIn); card.appendChild(row);
+  if(UI.adding.same){
+    card.appendChild(el("div",{cls:"note warn",style:"margin-top:8px",
+      text: UI.adding.same + " is already in your roster. To add them, pick them from the search above. Tap Add new again if this really is a different player."}));
+  }
+  card.appendChild(el("button",{cls:"btn solid wide",style:"margin-top:10px",text:"Add new player",on:{click:function(){
+    var r = addNewPlayer(sess, f);
+    if(r.same){ UI.adding.same = r.same.name; f.sameNameOk = true; render(); return; }
+    if(r.error){ toast(r.error); return; }
+    toast(r.player.name + " added"); UI.adding = null; render();
+  }}}));
+  return card;
+}
+function oppAddRow(sess, ti){
+  var side = sess.teams[ti], wrap = el("div",{});
+  var row = el("div",{cls:"bctl",style:"margin-top:8px"});
+  var inp = el("input",{type:"text",inputmode:"numeric",placeholder:"Jersey #",cls:"oppnum","aria-label":"Jersey number"});
+  var add = function(){ var r = addOppByNumber(sess, ti, inp.value); toast(r.msg); if(r.ok) render(); };
+  inp.addEventListener("keydown", function(e){ if(e.key === "Enter") add(); });
+  row.appendChild(inp);
+  row.appendChild(el("button",{cls:"btn sm",text:"Add",on:{click:add}}));
+  wrap.appendChild(row);
+  var known = oppPlayersOf(side.opp).filter(function(p){ return !p.retired && side.playerIds.indexOf(p.id) < 0; }).sort(byJersey);
+  if(known.length){
+    var chips = el("div",{cls:"chips",style:"margin-top:8px"});
+    known.forEach(function(p){
+      chips.appendChild(el("button",{cls:"chip",text:"+ " + benchName(p),on:{click:function(){
+        side.playerIds.push(p.id); save(); render(); }}}));
+    });
+    wrap.appendChild(chips);
+  }
+  var fix = el("div",{cls:"bctl",style:"margin-top:8px"});
+  var fi = el("input",{type:"text",inputmode:"numeric",placeholder:"#",cls:"oppnum","aria-label":"Number a new player is wearing"});
+  fix.appendChild(el("span",{cls:"sub",text:"New player wearing"}));
+  fix.appendChild(fi);
+  fix.appendChild(el("button",{cls:"btn sm",text:"Split",on:{click:function(){
+    var r = newOppInNumber(sess, ti, fi.value); toast(r.msg); if(r.ok) render(); }}}));
+  wrap.appendChild(fix);
+  return wrap;
+}
+// always on screen for an opponent side
+function oppBar(sess){
+  var side = sess.teams[UI.team];
+  if(!side.opp) return null;
+  var t = oppTeamById(side.opp);
+  var card = el("div",{cls:"card oppbar"});
+  card.appendChild(el("div",{cls:"sub",text:"Opponent: " + (t ? t.name : "?") + " \u00b7 add players by jersey number"}));
+  card.appendChild(oppAddRow(sess, UI.team));
+  return card;
+}
+function sideButtons(sess){
+  var side = sess.teams[UI.team], row = el("div",{cls:"btns",style:"margin-top:10px"});
+  if(!side.opp) row.appendChild(el("button",{cls:"btn sm",text:"+ Add player to " + side.name,
+    on:{click:function(){ UI.adding = { q: "" }; UI.editing = null; render(); }}}));
+  if(side.playerIds.indexOf(TEAM_ROWS[UI.team]) < 0) row.appendChild(el("button",{cls:"btn sm",text:"+ Team row",
+    on:{click:function(){ addTeamRow(sess, UI.team); render(); }}}));
+  return row;
+}
+function editPanel(sess){
+  if(!UI.editing) return null;
+  var p = player(UI.editing);
+  if(!p || p.teamRow){ UI.editing = null; return null; }
+  var opp = !!p.team, f = UI.editForm && UI.editForm.id === p.id ? UI.editForm
+    : (UI.editForm = { id: p.id, name: p.name || "", num: p.num || "", cat: p.cat || MISC_ID, desc: p.desc || "" });
+  var card = el("div",{cls:"card editpanel"}), head = el("div",{cls:"lurow"});
+  head.appendChild(el("h3",{style:"margin:0",text:"Edit " + benchName(p)}));
+  head.appendChild(el("button",{cls:"btn sm",text:"Close",on:{click:function(){ UI.editing = null; UI.editForm = null; render(); }}}));
+  card.appendChild(head);
+  var field = function(label, key, attrs){
+    var i = el("input", Object.assign({type:"text",value:f[key],"aria-label":label,placeholder:label}, attrs || {}));
+    i.addEventListener("input", function(){ f[key] = i.value; });
+    card.appendChild(i); return i;
+  };
+  field(opp ? "Name (optional)" : "Name", "name", {style:"margin-top:10px"});
+  if(opp) card.appendChild(el("div",{cls:"sub",style:"margin:6px 0",text:"Jersey " + jersey(p) + " \u00b7 if a different kid wears it now, use \u201CNew player wearing\u201D."}));
+  else {
+    field("Jersey (optional)", "num", {inputmode:"numeric"});
+    var cSel = el("select",{"aria-label":"Category"});
+    (S.categories || []).forEach(function(c){ var o = document.createElement("option"); o.value = c.id; o.textContent = c.name; cSel.appendChild(o); });
+    cSel.value = f.cat; cSel.addEventListener("change", function(){ f.cat = cSel.value; });
+    card.appendChild(cSel);
+  }
+  field("Descriptor (optional) \u2014 e.g. tall, left-handed", "desc");
+  var btns = el("div",{cls:"btns",style:"margin-top:10px"});
+  btns.appendChild(el("button",{cls:"btn solid",text:"Save",on:{click:function(){
+    var r = savePlayerEdit(p, f);
+    if(r.error){ toast(r.error); return; }
+    toast("Saved"); UI.editing = null; UI.editForm = null; render();
+  }}}));
+  var used = (sess.events || []).some(function(e){ return e.pid === p.id; }) ||
+             (sess.attempts || []).some(function(a){ return a.pids.indexOf(p.id) > -1; });
+  if(!used) btns.appendChild(el("button",{cls:"btn",text:"Take out of this session",on:{click:function(){
+    var ids = sessionIds(sess), i = ids.indexOf(p.id);
+    if(i > -1) ids.splice(i, 1);
+    save(); UI.editing = null; UI.editForm = null; UI.sel = null; render(); toast(benchName(p) + " taken out");
+  }}}));
+  card.appendChild(btns);
+  return card;
+}
+function savePlayerEdit(p, f){
+  var opp = !!p.team;
+  var nm = cleanPlayerName(f.name);
+  if(nm.error) return { error: cap(nm.error) };
+  if(!opp && !nm.value) return { error: "Type a name" };
+  var d = cleanNote(f.desc, 120).value;
+  if(!opp){
+    var j = cleanJersey(f.num);
+    if(j.error) return { error: cap(j.error) };
+    p.num = j.value;
+    p.cat = catById(f.cat) ? f.cat : (p.cat || MISC_ID);
+  }
+  p.name = nm.value; p.desc = d;
+  save();
+  return { ok: true };
+}
+function pname(pid){ var p = player(pid); return p ? (p.name || jersey(p) || "?") : "?"; }
 function jersey(p){ var n = p && p.num != null ? String(p.num).trim() : ""; return n ? "#" + n.replace(/^#/, "") : ""; }
-function benchName(p){ var j = jersey(p); return (j ? j + " " : "") + (p ? p.name : "?"); }
+function benchName(p){ var j = jersey(p); return ((j ? j + " " : "") + (p ? (p.name || "") : "?")).trim() || "?"; }
 function sessionPlayerIds(sess){
   if(sess.kind === "practice") return sess.playerIds || [];
   var out = [];
@@ -1165,8 +1531,10 @@ function record(key, val, pid, extra){
             team: sess.kind === "game" ? teamOf(sess, target) : null };
   if(sess.kind === "game" && sess.clock) e.clk = Math.round(clockLeft(sess));
   if(extra) Object.keys(extra).forEach(function(k){ e[k] = extra[k]; });
+  var pair = sess.kind === "game" ? pairAssist(sess, e) : null;   // v4.12
   sess.events.push(e);
-  toast(pname(target) + " · " + describe(st, e));
+  var zn = (isShot(st) && zonable(e)) ? " · " + zoneOf(e, st).zone.name : "";   // v4.13: where a charted shot was from
+  toast(pname(target) + " · " + describe(st, e) + zn + (pair ? (e.key === "AST" ? " · to " : " · from ") + pname(pair.pid) : ""));
   save(); render();
 }
 function removeLast(pid, key){
@@ -1195,7 +1563,7 @@ function deleteEvent(id){
 }
 
 /* ---------- shell ---------- */
-var TABS = [["session","Session"],["box","Box score"],["log","Log"],
+var TABS = [["session","Session"],["box","Box score"],["zones","Zones"],["log","Log"],
             ["sessions","Sessions"],["players","Players"],["stats","Stats"],["card","Report card"]];
 /* ---------- game clock ----------
    session.clock = { len, left, since }  (ms). `since` is set while running,
@@ -1335,12 +1703,25 @@ function render(){
       text:"Your earlier games were brought across. Points were split into 2P / 3P / 1P automatically."}));
     delete S.migratedFromV1; save();
   }
-  ({ session:viewSession, box:viewBox, log:viewLog, sessions:viewSessions,
+  ({ session:viewSession, box:viewBox, zones:viewZones, log:viewLog, sessions:viewSessions,
      players:viewPlayers, stats:viewStats, card:viewCard }[UI.tab] || viewSession)(v);
   var sess = activeSession();
   if(UI.shot && sess && sess.kind === "game") document.body.appendChild(shotOverlay(sess));
   syncClock();
+  fitGrid();
 }
+/* v4.12: the grid's header row sticks just under the scoreboard. A sticky header can't
+   work inside a sideways-scrolling box, so the box only scrolls sideways when the grid
+   is wider than the screen (a phone); when it fits (an iPad), the header sticks.      */
+function fitGrid(){
+  var b = document.querySelector(".board");
+  document.documentElement.style.setProperty("--boardh", (b ? b.offsetHeight : 0) + "px");
+  Array.prototype.forEach.call(document.querySelectorAll(".gridtw"), function(w){
+    var t = w.firstChild;
+    w.classList.toggle("fits", !!t && t.scrollWidth <= w.clientWidth + 1);
+  });
+}
+window.addEventListener("resize", fitGrid);
 
 /* ---------- session: router ---------- */
 function viewSession(v){
@@ -1363,6 +1744,7 @@ function viewGame(v, sess){
   });
   v.appendChild(tabs);
   v.appendChild(lineupStrip(sess));   // v4.9
+  [oppBar(sess), addPanel(sess), editPanel(sess)].forEach(function(x){ if(x) v.appendChild(x); });   // v4.10
 
   var shown = on.filter(function(s){ return !s.pts; });
   S.prefs = S.prefs || {};
@@ -1375,7 +1757,11 @@ function viewGame(v, sess){
   sw.appendChild(el("button",{cls:"chip chart","aria-pressed": S.prefs.chartShots ? "true":"false",
     text: "Chart shots",
     on:{click:function(){ S.prefs.chartShots = !S.prefs.chartShots; save(); render();
-      toast(S.prefs.chartShots ? "2P and 3P taps now ask where the shot was" : "Shot charting off"); }}}));
+      toast(S.prefs.chartShots ? "Shots, turnovers and blocks now ask where on the court" : "Shot charting off"); }}}));
+  if(S.prefs.chartShots) sw.appendChild(el("button",{cls:"chip fullcourt","aria-pressed": S.prefs.fullCourt ? "true":"false",
+    text: "Full court",
+    on:{click:function(){ S.prefs.fullCourt = !S.prefs.fullCourt; save(); render();
+      toast(S.prefs.fullCourt ? "Turnovers and blocks now use the full court" : "Turnovers and blocks now use the half court"); }}}));
   sw.appendChild(el("button",{cls:"btn sm",style:"margin-left:auto",text:"Stats",
     on:{click:function(){ UI.tab="stats"; render(); }}}));
   v.appendChild(sw);
@@ -1386,24 +1772,22 @@ function viewGame(v, sess){
     el("span",{text:"PTS · " + shown.map(function(s){ return s.short; }).join(" · ")})
   ]));
 
-  var ids = sess.teams[UI.team].playerIds;
+  var ids = courtOrder(sess, UI.team).ids;   // v4.12: on court first
   var grid = el("div",{cls:"grid"});
   ids.forEach(function(pid){
     var p = player(pid), m = tot[pid] || {n:0};
     var b = el("button",{cls:"plr " + (UI.team===0?"h":"a") + courtClass(sess, UI.team, pid),
       "aria-pressed": UI.sel===pid ? "true":"false",
       on:{click:function(){ UI.sel = (UI.sel===pid ? null : pid); UI.entry = null; render(); }}});
-    b.appendChild(el("span",{cls:"jn",text:p ? p.name : "?"}));
-    var subline = [jersey(p), p && p.desc].filter(Boolean).join(" · ");
+    b.appendChild(el("span",{cls:"jn",text:p ? (p.name || jersey(p) || "?") : "?"}));
+    var subline = [p && p.name ? jersey(p) : "", p && p.desc].filter(Boolean).join(" · ");
     if(subline) b.appendChild(el("span",{cls:"nm",text:subline}));
     b.appendChild(el("span",{cls:"ln num",
       text: pointsOf(m) + " · " + shown.map(function(s){ return cellText(s, m[s.key]); }).join(" · ")}));
     grid.appendChild(b);
   });
   v.appendChild(grid);
-  v.appendChild(el("button",{cls:"btn sm",style:"margin-top:10px",
-    text:"+ Add player to " + sess.teams[UI.team].name,
-    on:{click:function(){ UI.tab = "players"; UI.addTo = UI.team; render(); }}}));
+  v.appendChild(sideButtons(sess));   // v4.10
 
   var dock = el("div",{cls:"dock noprint"});
   var panel = entryPanel();
@@ -1414,7 +1798,8 @@ function viewGame(v, sess){
   } else {
     dock.appendChild(el("div",{cls:"who"},[
       el("strong",{text:pname(UI.sel)}),
-      el("button",{cls:"btn sm",text:"Clear",on:{click:function(){ UI.sel=null; render(); }}})
+      el("span",{cls:"btns",style:"margin:0"},[el("button",{cls:"btn sm",text:"Edit",on:{click:function(){ UI.editing = UI.sel; UI.adding = null; render(); }}}),
+        el("button",{cls:"btn sm",text:"Clear",on:{click:function(){ UI.sel=null; render(); }}})])
     ]));
     var scoring = on.filter(function(s){ return s.pts; });
     if(scoring.length){
@@ -1449,17 +1834,7 @@ function gameControls(sess, isTapGrid){
   var c = sess.clock, running = !!(c && c.since);
   if(!running){
     var addP = el("button",{cls:"btn",text:"+ Player"});
-    addP.addEventListener("click", function(){
-      var name = window.prompt("Player name:");
-      var nm0 = cleanPlayerName(name);
-      if(!nm0.value) return;
-      if(nm0.error){ toast(cap(nm0.error)); return; }
-      var newP = { id:uid("p"), name:nm0.value, desc:"", aliases:[], num:"", notes:"", active:true, cat:MISC_ID };
-      S.players.push(newP);
-      sess.teams[UI.team].playerIds.push(newP.id);
-      save(); render();
-      toast(name + " added to " + sess.teams[UI.team].name);
-    });
+    addP.addEventListener("click", function(){ UI.adding = { q: "" }; UI.editing = null; render(); });   // v4.10
     u.appendChild(addP);
     var addS = el("button",{cls:"btn",text:"+ Stat"});
     addS.addEventListener("click", function(){
@@ -1488,13 +1863,23 @@ function viewTapGrid(v, sess, tot){
   cols.forEach(function(c){ hr.appendChild(el("th",{text:c.short})); });
   tbl.appendChild(el("thead",{},[hr]));
   var tb = el("tbody");
-  sess.teams[UI.team].playerIds.forEach(function(pid){
+  var ord = courtOrder(sess, UI.team);
+  ord.ids.forEach(function(pid, ri){
+    if(ri === ord.benchAt){   // the stat names again, so they're never far from the row you tap
+      var br = el("tr",{cls:"benchhead"});
+      br.appendChild(el("th",{text:"Bench"})); br.appendChild(el("th",{text:"PTS"}));
+      cols.forEach(function(c){ br.appendChild(el("th",{text:c.short})); });
+      tb.appendChild(br);
+    }
     var p = player(pid), m = tot[pid] || {n:0, miss:{}};
     var tr = el("tr",{cls: courtClass(sess, UI.team, pid).trim()});
-    var nm = el("td",{cls:"nmcell"});
+    var nm = el("td",{cls:"nmcell",title:"Tap to edit",on:{click:function(){ UI.editing = pid; UI.adding = null; render(); }}});
     var nb = el("b");
-    if(jersey(p)) nb.appendChild(el("span",{cls:"jno num",text:jersey(p)}));
-    nb.appendChild(document.createTextNode(p ? p.name : "?"));
+    if(p && !p.name && jersey(p)) nb.appendChild(document.createTextNode(jersey(p)));   // unnamed opponent: the number is the name
+    else {
+      if(jersey(p)) nb.appendChild(el("span",{cls:"jno num",text:jersey(p)}));
+      nb.appendChild(document.createTextNode(p ? p.name : "?"));
+    }
     nm.appendChild(nb);
     if(p && p.desc) nm.appendChild(el("small",{text:p.desc}));
     tr.appendChild(nm);
@@ -1514,14 +1899,13 @@ function viewTapGrid(v, sess, tot){
     tb.appendChild(tr);
   });
   tbl.appendChild(tb);
-  v.appendChild(el("div",{cls:"tw"},[tbl]));
+  v.appendChild(el("div",{cls:"tw gridtw"},[tbl]));
   v.appendChild(el("p",{cls:"sub",style:"margin-top:8px",
     text: UI.minus ? "Minus is on — each tap removes that player's most recent entry for that stat."
         : (S.prefs && S.prefs.chartShots)
-          ? "Chart shots is on — a 2P or 3P tap asks where the shot was, and whether it went in."
+          ? "Chart shots is on — a 2P or 3P tap asks where the shot was and whether it went in; a turnover or block asks where it happened."
           : "Tap a cell to add one. Scoring cells add their points to the scoreboard."}));
-  v.appendChild(el("button",{cls:"btn sm",text:"+ Add player to " + sess.teams[UI.team].name,
-    on:{click:function(){ UI.tab = "players"; render(); }}}));
+  v.appendChild(sideButtons(sess));   // v4.10
   var dock = el("div",{cls:"dock noprint"});
   var panel = entryPanel(); if(panel) dock.appendChild(panel);
   dock.appendChild(gameControls(sess, true));
@@ -1531,17 +1915,51 @@ function viewTapGrid(v, sess, tot){
 /* ---------- shot chart ----------
    Positions are stored as fractions of a half court (x across, y from the
    baseline), so the chart is independent of screen size.               */
-function courtSVG(dots){
+/* v4.12.2: the full court. A spot is kept as two fractions in one of two frames:
+     half court (the default)  x across, y down from the baseline, basket at the top;
+     full court (court:"full") x across, y along the whole floor: 0 is the baseline the
+                               team attacks, 1 is the baseline it defends.
+   So a half-court spot on offence is the full court's attacking half (y / 2), and a
+   block, which happens at the basket the team defends, is the other half turned round.
+   The full court is drawn lying down, with every team attacking the basket on the right. */
+function spot4(x, y){ return { x: Math.round(x * 10000) / 10000, y: Math.round(y * 10000) / 10000 }; }
+function spotOnFull(e, defensive){
+  if(e.court === "full") return { x: e.x, y: e.y };
+  return defensive ? spot4(1 - e.x, 1 - e.y / 2) : spot4(e.x, e.y / 2);
+}
+// null when a full-court spot is in the half the half-court drawing doesn't show
+function spotOnHalf(e, defensive){
+  if(e.court !== "full") return { x: e.x, y: e.y };
+  if(defensive) return e.y >= 0.5 ? spot4(1 - e.x, (1 - e.y) * 2) : null;
+  return e.y <= 0.5 ? spot4(e.x, e.y * 2) : null;
+}
+function fullCourtSVG(dots){
   var ln = ' stroke="currentColor" stroke-width="2" fill="none"';
-  var s = '<svg class="court" viewBox="0 0 500 470" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Half court">' +
-    '<rect x="1" y="1" width="498" height="468"' + ln + '/>' +
-    '<rect x="170" y="1" width="160" height="189"' + ln + '/>' +
+  var end = '<rect x="170" y="1" width="160" height="189"' + ln + '/>' +
     '<circle cx="250" cy="190" r="60"' + ln + '/>' +
     '<line x1="220" y1="40" x2="280" y2="40"' + ln + '/>' +
     '<circle cx="250" cy="52.5" r="7.5"' + ln + '/>' +
     '<path d="M210 52.5 A40 40 0 0 0 290 52.5"' + ln + '/>' +
-    '<path d="M30 1 L30 140 A237.5 237.5 0 0 0 470 140 L470 1"' + ln + '/>' +
-    '<path d="M190 469 A60 60 0 0 1 310 469"' + ln + '/>';
+    '<path d="M30 1 L30 140 A237.5 237.5 0 0 0 470 140 L470 1"' + ln + '/>';
+  var s = '<svg class="court full" viewBox="0 0 940 500" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Full court">' +
+    '<rect x="1" y="1" width="938" height="498"' + ln + '/>' +
+    '<line x1="470" y1="1" x2="470" y2="499"' + ln + '/>' +
+    '<circle cx="470" cy="250" r="60"' + ln + '/>' +
+    '<g transform="matrix(0 1 -1 0 940 0)">' + end + '</g>' +      // the basket being attacked, on the right
+    '<g transform="matrix(0 -1 1 0 0 500)">' + end + '</g>';       // the basket being defended, on the left
+  (dots || []).forEach(function(d){
+    var x = Math.round((1 - d.y) * 9400) / 10, y = Math.round(d.x * 5000) / 10;
+    s += '<circle class="mk ' + d.side + '" cx="' + x + '" cy="' + y + '" r="10"/>';
+  });
+  s += '</svg>';
+  var holder = document.createElement("div");
+  holder.innerHTML = s;
+  return holder.firstChild;
+}
+function courtSVG(dots, full){
+  if(full) return fullCourtSVG(dots);
+  var s = '<svg class="court" viewBox="0 0 500 470" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Half court">' +
+          halfCourtLines();   // v4.13: the same lines the zone map draws
   (dots || []).forEach(function(d){
     var x = d.x * 500, y = d.y * 470;
     if(d.miss){
@@ -1563,14 +1981,16 @@ function placeShot(x, y){
   if(x !== null && x !== undefined){
     extra.x = Math.round(Math.min(1, Math.max(0, x)) * 1000) / 1000;
     extra.y = Math.round(Math.min(1, Math.max(0, y)) * 1000) / 1000;
+    if(sh.spot && S.prefs && S.prefs.fullCourt) extra.court = "full";   // v4.12.2
   }
   if(!sh.made) extra.miss = true;
   record(sh.key, undefined, sh.pid, extra);
 }
 function shotOverlay(sess){
   var sh = UI.shot, st = statByKey(sh.key);
-  var wrap = el("div",{cls:"overlay",role:"dialog","aria-label":"Place the shot"});
-  var box = el("div",{cls:"sheet"});
+  var wrap = el("div",{cls:"overlay",role:"dialog","aria-label": sh.spot ? "Mark the spot" : "Place the shot"});
+  var full = !!sh.spot && !!(S.prefs && S.prefs.fullCourt);   // v4.12.2
+  var box = el("div",{cls:"sheet" + (full ? " widesheet" : "")});
   box.appendChild(el("div",{cls:"who"},[
     el("strong",{text: pname(sh.pid) + " · " + st.label}),
     el("button",{cls:"btn sm",text:"Cancel",on:{click:function(){ UI.shot = null; render(); }}})
@@ -1580,30 +2000,104 @@ function shotOverlay(sess){
     seg.appendChild(el("button",{cls:"btn seg","aria-pressed": sh.made === o[0] ? "true":"false", text:o[1],
       on:{click:function(){ sh.made = o[0]; render(); }}}));
   });
-  box.appendChild(seg);
-  var court = courtSVG([]);
+  if(!sh.spot) box.appendChild(seg);   // a turnover or block has no made or missed
+  if(sh.spot) box.appendChild(el("button",{cls:"chip fullcourt",style:"margin-bottom:10px","aria-pressed": full ? "true" : "false",
+    text:"Full court", on:{click:function(){ S.prefs.fullCourt = !full; save(); render(); }}}));
+  var court = courtSVG([], full);
   court.addEventListener("click", function(ev){
     var r = court.getBoundingClientRect(); if(!r.width) return;
-    placeShot((ev.clientX - r.left) / r.width, (ev.clientY - r.top) / r.height);
+    var px = (ev.clientX - r.left) / r.width, py = (ev.clientY - r.top) / r.height;
+    if(full) placeShot(py, 1 - px);   // lying down: across is up-and-down, the attacked baseline is on the right
+    else placeShot(px, py);
   });
   box.appendChild(court);
-  box.appendChild(el("p",{cls:"sub",style:"margin:8px 0 0",text:"Tap where the shot was taken. The basket is at the top."}));
+  box.appendChild(el("p",{cls:"sub",style:"margin:8px 0 0",text: full ? "Tap where it happened. " + sess.teams[teamOf(sess, sh.pid)].name + " is attacking the basket on the right."
+             : sh.spot ? "Tap where it happened. The basket is at the top." : "Tap where the shot was taken. The basket is at the top."}));
   box.appendChild(el("button",{cls:"btn wide",style:"margin-top:8px",text:"Save without a spot",
     on:{click:function(){ placeShot(null, null); }}}));
   wrap.appendChild(box);
   return wrap;
 }
+/* v4.12: turnovers and blocks are charted too (a spot, with no made or missed), and an
+   assist is paired with the basket it led to, so it shows where that shot was taken.
+   Pairing needs no extra tap: an assist goes with the made basket a teammate scored
+   just before it (or just after it, if the assist was tapped first). "Just" means the
+   team's nearest tap, in the same period, within a minute. The link is the basket's
+   event id, kept on the assist as e.shot; if the basket is later removed the assist
+   simply counts as unpaired.                                                        */
+var SPOT_KEYS = ["TO", "BLK"];
+var PAIR_MS = 60000;
+function isSpot(st){ return !!st && SPOT_KEYS.indexOf(st.key) > -1; }
+function hasSpot(e){ return typeof e.x === "number" && typeof e.y === "number"; }
+function eventById(sess, id){
+  var ev = sess.events || [];
+  for(var i = 0; i < ev.length; i++){ if(ev[i].id === id) return ev[i]; }
+  return null;
+}
+function madeBasket(e){ return isShot(statByKey(e.key)) && !e.miss; }
+function assistShot(sess, e){ return e.key === "AST" && e.shot ? eventById(sess, e.shot) : null; }
+function assistFor(sess, shotId){
+  var ev = sess.events || [];
+  for(var i = 0; i < ev.length; i++){ if(ev[i].key === "AST" && ev[i].shot === shotId) return ev[i]; }
+  return null;
+}
+// called with the new event before it joins the log; returns the event it paired with
+function pairAssist(sess, e){
+  var isAst = e.key === "AST", isMade = madeBasket(e);
+  if(!isAst && !isMade) return null;
+  var ev = sess.events || [];
+  for(var i = ev.length - 1; i >= 0 && i >= ev.length - 4; i--){
+    var f = ev[i];
+    if(f.team !== e.team) continue;                    // the other team's taps in between don't matter
+    if(f.pid === e.pid || f.period !== e.period || Math.abs(e.t - f.t) > PAIR_MS) return null;
+    if(isAst && madeBasket(f) && !assistFor(sess, f.id)){ e.shot = f.id; return f; }
+    if(isMade && f.key === "AST" && !assistShot(sess, f)){ f.shot = e.id; return f; }
+    return null;                                       // the team's nearest tap is something else
+  }
+  return null;
+}
+function assistPairs(sess){
+  var out = [];
+  (sess.events || []).forEach(function(e){
+    var sh = assistShot(sess, e);
+    if(sh) out.push({ ast: e, shot: sh });
+  });
+  return out;
+}
+function chartKinds(){
+  return [["shots", "Shots"]].concat(
+    [["TO", "Turnovers"], ["BLK", "Blocks"], ["AST", "Assists"]].filter(function(k){ return !!statByKey(k[0]); }));
+}
 function shotSection(sess){
   var wrap = el("div",{cls:"card",style:"margin-top:18px"});
   wrap.appendChild(el("h3",{style:"margin-top:0",text:"Shot chart"}));
   var shots = sess.events.filter(function(e){ return isShot(statByKey(e.key)); });
-  var charted = shots.filter(function(e){ return typeof e.x === "number"; });
+  var charted = shots.filter(hasSpot);
   var anyMiss = shots.some(function(e){ return e.miss; });
-  if(!charted.length && !anyMiss){
+  var spots = sess.events.filter(function(e){ return isSpot(statByKey(e.key)) && hasSpot(e); });
+  var pairs = assistPairs(sess);
+  if(!charted.length && !anyMiss && !spots.length && !pairs.length){
     wrap.appendChild(el("p",{cls:"sub",style:"margin:0",
-      text:"Nothing charted yet. Turn on Chart shots on the game screen — each 2P or 3P tap will then ask where the shot was."}));
+      text:"Nothing charted yet. Turn on Chart shots on the game screen — each shot, turnover and block will then ask where it was."}));
     return wrap;
   }
+  var kinds = chartKinds(), what = UI.chartWhat || "shots";
+  if(!kinds.some(function(k){ return k[0] === what; })) what = "shots";
+  var chips = el("div",{cls:"chips chartkinds",style:"margin-bottom:10px"});
+  kinds.forEach(function(k){
+    chips.appendChild(el("button",{cls:"chip","aria-pressed": what === k[0] ? "true" : "false", text:k[1],
+      on:{click:function(){ UI.chartWhat = k[0]; render(); }}}));
+  });
+  wrap.appendChild(chips);
+  // v4.12.2: turnovers, blocks and assists can be drawn on the full court; shots stay on the half court
+  var full = what !== "shots" && !!(S.prefs && S.prefs.fullCourt), hidden = 0;
+  function place(e, at){   // e gives the team, at holds the spot
+    var p = full ? spotOnFull(at, what === "BLK") : spotOnHalf(at, what === "BLK");
+    if(!p){ hidden++; return null; }
+    return { x: p.x, y: p.y, miss: false, side: e.team === 1 ? "a" : "h" };
+  }
+  function some(d){ return !!d; }
+
   var f = UI.shotFilter || "all";
   var sel = el("select",{"aria-label":"Whose shots"});
   var opts = [["all","Both teams"],["t0",sess.teams[0].name],["t1",sess.teams[1].name]];
@@ -1618,37 +2112,539 @@ function shotSection(sess){
     if(f === "t1") return e.team === 1;
     return e.pid === f.slice(2);
   }
-  var dots = charted.filter(keep).map(function(e){
-    return { x:e.x, y:e.y, miss:!!e.miss, side: e.team === 1 ? "a" : "h" };
-  });
+  function dot(e, at){ return { x:at.x, y:at.y, miss:!!at.miss, side: e.team === 1 ? "a" : "h" }; }
+  var dots, legend;
+  if(what === "shots"){
+    dots = charted.filter(keep).map(function(e){ return dot(e, e); });
+    legend = "● made   ✕ missed";
+  } else if(what === "AST"){
+    dots = pairs.filter(function(a){ return keep(a.ast) && hasSpot(a.shot); }).map(function(a){ return place(a.ast, a.shot); }).filter(some);
+    legend = "● a basket that came from an assist, where the shot was taken";
+  } else {
+    dots = spots.filter(function(e){ return e.key === what && keep(e); }).map(function(e){ return place(e, e); }).filter(some);
+    legend = what === "TO" ? "● where the ball was lost" : "● where the shot was blocked";
+  }
   wrap.appendChild(el("div",{style:"height:10px"}));
-  wrap.appendChild(courtSVG(dots));
-  wrap.appendChild(el("p",{cls:"sub",style:"margin:8px 0 12px",text:"● made   ✕ missed"}));
+  if(what !== "shots") wrap.appendChild(el("button",{cls:"chip fullcourt",style:"margin-bottom:10px","aria-pressed": full ? "true" : "false",
+    text:"Full court", on:{click:function(){ S.prefs = S.prefs || {}; S.prefs.fullCourt = !full; save(); render(); }}}));
+  wrap.appendChild(courtSVG(dots, full));
+  if(full) legend += ". Each team is shown attacking the basket on the right.";
+  if(hidden) legend += ". " + hidden + " more in the other half of the court: turn on Full court to see " + (hidden === 1 ? "it" : "them") + ".";
+  wrap.appendChild(el("p",{cls:"sub",style:"margin:8px 0 12px",text:legend}));
 
-  var shotKeys = S.stats.filter(isShot);
-  var tbl = el("table");
-  tbl.innerHTML = "<thead><tr><th>Player</th>" +
-    shotKeys.map(function(s){ return "<th>" + esc(s.short) + "</th>"; }).join("") + "<th>FG%</th></tr></thead>";
-  var tb = el("tbody");
-  sessionPlayerIds(sess).forEach(function(pid){
-    var mine = shots.filter(function(e){ return e.pid === pid && keep(e); });
-    if(!mine.length) return;
-    var tr = el("tr"), made = 0, att = 0;
-    tr.appendChild(el("td",{text:pname(pid)}));
-    shotKeys.forEach(function(s){
-      var k = mine.filter(function(e){ return e.key === s.key; });
-      var m = k.filter(function(e){ return !e.miss; }).length;
-      made += m; att += k.length;
-      tr.appendChild(el("td",{cls:"num",text: m + "/" + k.length}));
+  var tbl = el("table"), tb = el("tbody"), note;
+  if(what === "shots"){
+    var shotKeys = S.stats.filter(isShot);
+    tbl.innerHTML = "<thead><tr><th>Player</th>" +
+      shotKeys.map(function(s){ return "<th>" + esc(s.short) + "</th>"; }).join("") + "<th>FG%</th></tr></thead>";
+    sessionPlayerIds(sess).forEach(function(pid){
+      var mine = shots.filter(function(e){ return e.pid === pid && keep(e); });
+      if(!mine.length) return;
+      var tr = el("tr"), made = 0, att = 0;
+      tr.appendChild(el("td",{text:pname(pid)}));
+      shotKeys.forEach(function(s){
+        var k = mine.filter(function(e){ return e.key === s.key; });
+        var m = k.filter(function(e){ return !e.miss; }).length;
+        made += m; att += k.length;
+        tr.appendChild(el("td",{cls:"num",text: m + "/" + k.length}));
+      });
+      tr.appendChild(el("td",{cls:"num",text: att ? Math.round(made / att * 100) + "%" : "—"}));
+      tb.appendChild(tr);
     });
-    tr.appendChild(el("td",{cls:"num",text: att ? Math.round(made / att * 100) + "%" : "—"}));
-    tb.appendChild(tr);
-  });
+    note = "Misses are only captured while Chart shots is on, so FG% covers the stretch you charted.";
+  } else if(what === "AST"){
+    tbl.innerHTML = "<thead><tr><th>Passer</th><th>Scorer</th><th>Baskets</th></tr></thead>";
+    var count = {}, order = [];
+    pairs.filter(function(a){ return keep(a.ast); }).forEach(function(a){
+      var k = a.ast.pid + "|" + a.shot.pid;
+      if(!count[k]){ count[k] = 0; order.push(k); }
+      count[k]++;
+    });
+    order.sort(function(a, b){ return count[b] - count[a]; }).forEach(function(k){
+      var ids = k.split("|"), tr = el("tr");
+      tr.appendChild(el("td",{text:pname(ids[0])})); tr.appendChild(el("td",{text:pname(ids[1])}));
+      tr.appendChild(el("td",{cls:"num",text:String(count[k])}));
+      tb.appendChild(tr);
+    });
+    var allAst = sess.events.filter(function(e){ return e.key === "AST" && keep(e); }).length;
+    var paired = pairs.filter(function(a){ return keep(a.ast); }).length;
+    note = paired + " of " + allAst + " assists are paired with a basket. An assist pairs itself with the basket a teammate " +
+           "scored just before or after it; the dot appears when that shot was charted.";
+  } else {
+    tbl.innerHTML = "<thead><tr><th>Player</th><th>Charted</th><th>Total</th></tr></thead>";
+    sessionPlayerIds(sess).forEach(function(pid){
+      var mine = sess.events.filter(function(e){ return e.key === what && e.pid === pid && keep(e); });
+      if(!mine.length) return;
+      var tr = el("tr");
+      tr.appendChild(el("td",{text:pname(pid)}));
+      tr.appendChild(el("td",{cls:"num",text:String(mine.filter(hasSpot).length)}));
+      tr.appendChild(el("td",{cls:"num",text:String(mine.length)}));
+      tb.appendChild(tr);
+    });
+    note = "A spot is only asked for while Chart shots is on, so the chart covers the stretch you charted.";
+  }
   tbl.appendChild(tb);
   wrap.appendChild(el("div",{cls:"tw"},[tbl]));
-  wrap.appendChild(el("p",{cls:"sub",style:"margin:8px 0 0",
-    text:"Misses are only captured while Chart shots is on, so FG% covers the stretch you charted."}));
+  wrap.appendChild(el("p",{cls:"sub",style:"margin:8px 0 0",text:note}));
+  if(what === "shots") wrap.appendChild(el("button",{cls:"btn sm noprint zonelink",style:"margin-top:10px",text:"See these shots by zone",
+    on:{click:function(){ UI.tab = "zones"; UI.zoneScope = sess.id; UI.zoneFilter = f; UI.zoneView = "zones"; UI.zonePick = null; render(); }}}));   // v4.13
   return wrap;
+}
+
+/* ---------- shot zones (v4.13) ----------
+   Every charted shot has a spot on the half court (x across, y down from the
+   baseline, both as fractions of the drawing). From the spot the app works out:
+     distance  feet from the basket;
+     angle     degrees away from straight on: 0 is the middle of the floor, 90 is
+               level with the basket along the baseline. Left and right are as
+               you face the basket;
+     zone      a named place. Close in, the drawn lines decide: inside the
+               restricted arc is "At the rim", the free-throw circle is the
+               "Nail", the rest of the lane is the "Paint". Further out the angle
+               decides, in four bands a side: baseline, wing, slot and the middle.
+               Inside the arc those are the short corner, wing midrange, elbow
+               and top of the key; a three takes the same bands as the corner,
+               wing, slot and top-of-the-key threes.
+   Whether a shot is a three comes from the stat that was tapped (3P), not from
+   the spot, so a toe on the line or a tap that's a little off can't turn a two
+   into a three. With no stat to go by (tapping the map), the drawn line decides.
+   Nothing is saved: zones are worked out from the spots each time, so changing a
+   boundary here re-sorts every shot already charted.
+   Measurements use the half-court drawing: 10 units to the foot.               */
+var ZG = { w:500, h:470, bx:250, by:52.5, r3:237.5, corner:220, brk:140, lane:80, ft:190, ftr:60, ra:40 };
+ZG.cy3 = ZG.brk - Math.sqrt(ZG.r3 * ZG.r3 - ZG.corner * ZG.corner);   // centre of the three-point arc as drawn
+var Z_TOP = 11, Z_SLOT = 38;                                            // degrees from straight on
+var Z_BASE = Math.atan2(ZG.corner, ZG.brk - ZG.by) * 180 / Math.PI;    // 68.3: the line through the break of the three-point line
+var Z_MIN_SHADE = 3;                                                    // shots a zone needs before it is shaded
+
+var ZONE_RANGES = [["rim","At the rim"],["paint","Paint"],["nail","Nail (free-throw line)"],["mid","Midrange"],["three","Threes"]];
+var ZONE_BANDS = {
+  c: { angle:"baseline", mid:"short corner",  three:"corner three", midShort:"Short corner", threeShort:"Corner 3" },
+  w: { angle:"wing",     mid:"wing midrange", three:"wing three",   midShort:"Wing",         threeShort:"Wing 3" },
+  s: { angle:"slot",     mid:"elbow",         three:"slot three",   midShort:"Elbow",        threeShort:"Slot 3" }
+};
+var ZONE_SECTORS = (function(){
+  var b = Math.round(Z_BASE), deg = { c: b + "°+", w: Z_SLOT + "–" + b + "°", s: Z_TOP + "–" + Z_SLOT + "°" };
+  var out = [];
+  ["c","w","s"].forEach(function(k){
+    out.push({ id:"l" + k, side:"l", band:k, name:"Left " + ZONE_BANDS[k].angle, short: cap(ZONE_BANDS[k].angle), deg:deg[k] }); });
+  out.push({ id:"t", side:"m", band:"t", name:"Middle", short:"Middle", deg:"0–" + Z_TOP + "°" });
+  ["s","w","c"].forEach(function(k){
+    out.push({ id:"r" + k, side:"r", band:k, name:"Right " + ZONE_BANDS[k].angle, short: cap(ZONE_BANDS[k].angle), deg:deg[k] }); });
+  function cap(s){ return s.charAt(0).toUpperCase() + s.slice(1); }
+  return out;   // left baseline round to right baseline, the way they sit on the court
+})();
+var ZONES = (function(){
+  var out = [
+    { id:"rim",   range:"rim",   name:"At the rim", short:"Rim" },
+    { id:"paint", range:"paint", name:"Paint", short:"Paint" },
+    { id:"nail",  range:"nail",  name:"Nail (free-throw line)", short:"Nail" }
+  ];
+  ["mid","three"].forEach(function(range){
+    ZONE_SECTORS.forEach(function(sec){
+      var b = ZONE_BANDS[sec.band];
+      out.push({ id: range + "-" + sec.id, range: range, sector: sec.id,
+        name: sec.band === "t" ? (range === "mid" ? "Top of the key midrange" : "Top of the key three")
+                               : (sec.side === "l" ? "Left " : "Right ") + b[range],
+        short: sec.band === "t" ? (range === "mid" ? "Top" : "Top 3") : b[range + "Short"] });
+    });
+  });
+  return out;
+})();
+function zoneById(id){ for(var i = 0; i < ZONES.length; i++){ if(ZONES[i].id === id) return ZONES[i]; } return null; }
+function sectorById(id){ for(var i = 0; i < ZONE_SECTORS.length; i++){ if(ZONE_SECTORS[i].id === id) return ZONE_SECTORS[i]; } return null; }
+function rangeName(id){ for(var i = 0; i < ZONE_RANGES.length; i++){ if(ZONE_RANGES[i][0] === id) return ZONE_RANGES[i][1]; } return id; }
+
+// where a spot is, measured from the basket
+function spotGeo(x, y){
+  var dx = x * ZG.w - ZG.bx, dy = y * ZG.h - ZG.by, d = Math.sqrt(dx * dx + dy * dy);
+  var deg = Math.atan2(Math.abs(dx), dy) * 180 / Math.PI;
+  var band = deg < Z_TOP ? "t" : deg < Z_SLOT ? "s" : deg < Z_BASE ? "w" : "c";
+  var side = band === "t" ? "m" : dx < 0 ? "l" : "r";
+  return { dx:dx, dy:dy, d:d, ft: Math.round(d) / 10, deg:deg, band:band, side:side, lr: dx < 0 ? "left" : "right",
+           sector: band === "t" ? "t" : side + band };
+}
+// outside the three-point line as drawn: the straight part in the corners, the arc above them
+function beyondArc(x, y){
+  var px = x * ZG.w, py = y * ZG.h, dx = Math.abs(px - ZG.bx);
+  if(py <= ZG.brk) return dx >= ZG.corner;
+  return Math.sqrt(dx * dx + (py - ZG.cy3) * (py - ZG.cy3)) >= ZG.r3;
+}
+// three: true or false when the stat says so; leave it out to go by the drawn line
+function zoneAt(x, y, three){
+  var g = spotGeo(x, y), px = x * ZG.w, py = y * ZG.h, id;
+  if(three === undefined || three === null) three = beyondArc(x, y);
+  var nx = px - ZG.bx, ny = py - ZG.ft;
+  if(three) id = "three-" + g.sector;
+  else if(g.d <= ZG.ra || (Math.abs(g.dx) <= ZG.ra && py <= ZG.by)) id = "rim";
+  else if(Math.sqrt(nx * nx + ny * ny) <= ZG.ftr) id = "nail";
+  else if(Math.abs(g.dx) <= ZG.lane && py <= ZG.ft) id = "paint";
+  else id = "mid-" + g.sector;
+  return { id:id, zone: zoneById(id), sector: g.sector, band: g.band, side: g.side, lr: g.lr, ft: g.ft, deg: g.deg };
+}
+function zoneOf(e, st){
+  st = st || statByKey(e.key);
+  return zoneAt(e.x, e.y, ((st && st.pts) || 0) >= 3);
+}
+function zonable(e){ return hasSpot(e) && e.court !== "full"; }
+function spotText(z){
+  var ang = z.deg < 1 ? "straight on" : Math.round(z.deg) + "° " + z.lr + " of straight on";
+  return z.zone.name + " · " + Math.round(z.ft) + " ft from the basket · " + ang;
+}
+
+/* ---------- which shots ---------- */
+function zoneGames(){ return (S.sessions || []).filter(function(s){ return s.kind === "game"; }); }
+function zoneScope(){
+  var games = zoneGames(), sc = UI.zoneScope;
+  if(sc === "all") return "all";
+  if(sc && games.some(function(s){ return s.id === sc; })) return sc;
+  var act = activeSession();
+  return act && act.kind === "game" ? act.id : "all";
+}
+function zoneSessions(){
+  var sc = zoneScope();
+  return zoneGames().filter(function(s){ return sc === "all" || s.id === sc; });
+}
+function zoneGameName(s){
+  return new Date(s.date).toLocaleDateString() + " · " + s.teams[0].name + " vs " + s.teams[1].name;
+}
+function zoneFilterOptions(sessions, single){
+  var opts;
+  if(single){
+    var s = sessions[0];
+    opts = [["all","Both teams"],["t0",s.teams[0].name],["t1",s.teams[1].name]];
+    sessionPlayerIds(s).forEach(function(pid){ opts.push(["p:" + pid, pname(pid)]); });
+    return opts;
+  }
+  opts = [["all","Everyone"]];
+  var anyOpp = sessions.some(function(x){ return (x.teams || []).some(function(side){ return !!side.opp; }); });
+  if(anyOpp){ opts.push(["ours","Our players"]); opts.push(["opp","Opponents"]); }
+  var shot = {};
+  sessions.forEach(function(x){ (x.events || []).forEach(function(e){ if(isShot(statByKey(e.key))) shot[e.pid] = true; }); });
+  S.players.filter(function(p){ return shot[p.id]; })
+    .sort(function(a, b){ return String(a.name || "").localeCompare(String(b.name || "")); })
+    .forEach(function(p){ opts.push(["p:" + p.id, p.name || jersey(p) || "?"]); });
+  return opts;
+}
+function zoneKeep(f, sess, e){
+  if(f === "all") return true;
+  if(f === "t0") return e.team === 0;
+  if(f === "t1") return e.team === 1;
+  if(f === "ours" || f === "opp"){
+    var side = (sess.teams || [])[e.team], isOpp = !!(side && side.opp);
+    return f === "opp" ? isOpp : !isOpp;
+  }
+  return e.pid === f.slice(2);
+}
+// every shot (2P, 3P, any stat worth 2 or more) in those games that passes the filter; z is null without a spot
+function zoneShots(sessions, f){
+  var out = [];
+  sessions.forEach(function(sess){
+    (sess.events || []).forEach(function(e){
+      var st = statByKey(e.key);
+      if(!isShot(st) || !zoneKeep(f, sess, e)) return;
+      out.push({ e:e, sess:sess, st:st, z: zonable(e) ? zoneOf(e, st) : null });
+    });
+  });
+  return out;
+}
+function zoneTally(list){
+  var t = { zone:{}, sector:{}, range:{}, side:{}, all:{ att:0, made:0, pts:0 }, loose:{ att:0, made:0 } };
+  function add(group, k, s){
+    var c = group[k] || (group[k] = { att:0, made:0, pts:0 });
+    c.att++;
+    if(!s.e.miss){ c.made++; c.pts += s.st.pts || 0; }
+  }
+  list.forEach(function(s){
+    if(!s.z){ t.loose.att++; if(!s.e.miss) t.loose.made++; return; }
+    add(t.zone, s.z.id, s); add(t.sector, s.z.sector, s); add(t.range, s.z.zone.range, s); add(t.side, s.z.side, s);
+    add(t, "all", s);
+  });
+  return t;
+}
+// free throws, from the games where misses were recorded (an FTX tap), so the percentage means something
+function zoneFreeThrows(sessions, f){
+  var out = { made:0, att:0 };
+  sessions.forEach(function(sess){
+    var ev = sess.events || [];
+    if(!ev.some(function(e){ return e.key === "FTX"; })) return;
+    ev.forEach(function(e){
+      if((e.key !== "1P" && e.key !== "FTX") || !zoneKeep(f, sess, e)) return;
+      out.att++; if(e.key === "1P") out.made++;
+    });
+  });
+  return out;
+}
+function zPct(c){ return c && c.att ? Math.round(c.made / c.att * 100) + "%" : "—"; }
+function zPps(c){ return c && c.att ? (c.pts / c.att).toFixed(2) : "—"; }
+function zShare(c, all){ return c && c.att && all && all.att ? Math.round(c.att / all.att * 100) + "%" : "—"; }
+function zShade(c){
+  if(!c || !c.att) return "zf0";
+  if(c.att < Z_MIN_SHADE) return "zfew";
+  var p = c.made / c.att;
+  return p < 0.25 ? "zf1" : p < 0.4 ? "zf2" : p < 0.55 ? "zf3" : "zf4";
+}
+
+/* ---------- drawing ---------- */
+function halfCourtLines(){
+  var ln = ' stroke="currentColor" stroke-width="2" fill="none"';
+  return '<rect x="1" y="1" width="498" height="468"' + ln + '/>' +
+    '<rect x="170" y="1" width="160" height="189"' + ln + '/>' +
+    '<circle cx="250" cy="190" r="60"' + ln + '/>' +
+    '<line x1="220" y1="40" x2="280" y2="40"' + ln + '/>' +
+    '<circle cx="250" cy="52.5" r="7.5"' + ln + '/>' +
+    '<path d="M210 52.5 A40 40 0 0 0 290 52.5"' + ln + '/>' +
+    '<path d="M30 1 L30 140 A237.5 237.5 0 0 0 470 140 L470 1"' + ln + '/>' +
+    '<path d="M190 469 A60 60 0 0 1 310 469"' + ln + '/>';
+}
+// points along a line from the basket at an angle from straight on; sd is +1 for the right side, -1 for the left
+function zAt(deg, sd, t){ var a = deg * Math.PI / 180; return [ZG.bx + sd * Math.sin(a) * t, ZG.by + Math.cos(a) * t]; }
+function zArc(deg, sd){      // where it meets the three-point arc as drawn
+  var k = ZG.by - ZG.cy3, c = Math.cos(deg * Math.PI / 180);
+  return zAt(deg, sd, -k * c + Math.sqrt(k * k * c * c - k * k + ZG.r3 * ZG.r3));
+}
+function zEdge(deg, sd){     // where it leaves the court
+  var a = deg * Math.PI / 180, sx = Math.sin(a), cy = Math.cos(a);
+  var tx = sx > 1e-9 ? ZG.bx / sx : Infinity;
+  var ty = cy > 1e-9 ? (ZG.h - ZG.by) / cy : cy < -1e-9 ? -ZG.by / cy : Infinity;
+  return zAt(deg, sd, Math.min(tx, ty));
+}
+function zLane(deg, sd){ return zAt(deg, sd, ZG.lane / Math.sin(deg * Math.PI / 180)); }   // where it crosses the lane line
+function zCircle(deg, sd){   // the far side of the free-throw circle
+  var m = ZG.ft - ZG.by, c = Math.cos(deg * Math.PI / 180);
+  return zAt(deg, sd, m * c + Math.sqrt(m * m * c * c - m * m + ZG.ftr * ZG.ftr));
+}
+function zp(p){ return (Math.round(p[0] * 10) / 10) + " " + (Math.round(p[1] * 10) / 10); }
+// the outline of every zone and of every angle band, as SVG paths; these and zoneAt() describe the same shapes
+function zoneShapes(){
+  if(zoneShapes.cache) return zoneShapes.cache;
+  var G = ZG, z = {}, s = {}, r3 = G.r3 + " " + G.r3 + " 0 0 ", fr = G.ftr + " " + G.ftr + " 0 0 ";
+  var B = [G.bx, G.by];
+  [1, -1].forEach(function(sd){
+    var k = sd > 0 ? "r" : "l";
+    var sw = function(f){ return sd > 0 ? f : 1 - f; };             // arcs turn the other way on the left
+    var X = function(d){ return G.bx + sd * d; };
+    var brk = [X(G.corner), G.brk], a38 = zArc(Z_SLOT, sd), a11 = zArc(Z_TOP, sd);
+    var e68 = zEdge(Z_BASE, sd), e38 = zEdge(Z_SLOT, sd), e11 = zEdge(Z_TOP, sd);
+    var l68 = zLane(Z_BASE, sd), l38 = zLane(Z_SLOT, sd), F = zCircle(Z_TOP, sd);
+    z["three-" + k + "c"] = "M" + zp([X(G.corner), 0]) + "L" + zp([X(G.bx), 0]) + "L" + zp(e68) + "L" + zp(brk) + "Z";
+    z["three-" + k + "w"] = "M" + zp(brk) + "L" + zp(e68) + "L" + zp(e38) + "L" + zp(a38) + "A" + r3 + sw(0) + " " + zp(brk) + "Z";
+    z["three-" + k + "s"] = "M" + zp(a38) + "L" + zp(e38) + "L" + zp([X(G.bx), G.h]) + "L" + zp(e11) + "L" + zp(a11) +
+                            "A" + r3 + sw(0) + " " + zp(a38) + "Z";
+    z["mid-" + k + "c"] = "M" + zp([X(G.lane), 0]) + "L" + zp([X(G.corner), 0]) + "L" + zp(brk) + "L" + zp(l68) + "Z";
+    z["mid-" + k + "w"] = "M" + zp(l68) + "L" + zp(brk) + "A" + r3 + sw(1) + " " + zp(a38) + "L" + zp(l38) + "Z";
+    z["mid-" + k + "s"] = "M" + zp(l38) + "L" + zp(a38) + "A" + r3 + sw(1) + " " + zp(a11) + "L" + zp(F) +
+                          "A" + fr + sw(0) + " " + zp([X(G.ftr), G.ft]) + "L" + zp([X(G.lane), G.ft]) + "Z";
+    s[k + "c"] = "M" + zp(B) + "L" + zp(e68) + "L" + zp([X(G.bx), 0]) + "L" + zp([G.bx, 0]) + "Z";
+    s[k + "w"] = "M" + zp(B) + "L" + zp(e38) + "L" + zp(e68) + "Z";
+    s[k + "s"] = "M" + zp(B) + "L" + zp(e11) + "L" + zp([X(G.bx), G.h]) + "L" + zp(e38) + "Z";
+  });
+  z["three-t"] = "M" + zp(zArc(Z_TOP, 1)) + "L" + zp(zEdge(Z_TOP, 1)) + "L" + zp(zEdge(Z_TOP, -1)) + "L" + zp(zArc(Z_TOP, -1)) +
+                 "A" + r3 + "0 " + zp(zArc(Z_TOP, 1)) + "Z";
+  z["mid-t"] = "M" + zp(zCircle(Z_TOP, 1)) + "L" + zp(zArc(Z_TOP, 1)) + "A" + r3 + "1 " + zp(zArc(Z_TOP, -1)) + "L" + zp(zCircle(Z_TOP, -1)) +
+               "A" + fr + "0 " + zp(zCircle(Z_TOP, 1)) + "Z";
+  z.nail = "M" + (G.bx - G.ftr) + " " + G.ft + "A" + G.ftr + " " + G.ftr + " 0 1 0 " + (G.bx + G.ftr) + " " + G.ft +
+           "A" + G.ftr + " " + G.ftr + " 0 1 0 " + (G.bx - G.ftr) + " " + G.ft + "Z";
+  z.paint = "M" + (G.bx - G.lane) + " 0L" + (G.bx + G.lane) + " 0L" + (G.bx + G.lane) + " " + G.ft + "L" + (G.bx + G.ftr) + " " + G.ft +
+            "A" + fr + "0 " + (G.bx - G.ftr) + " " + G.ft + "L" + (G.bx - G.lane) + " " + G.ft + "Z";
+  z.rim = "M" + (G.bx - G.ra) + " 0L" + (G.bx + G.ra) + " 0L" + (G.bx + G.ra) + " " + G.by +
+          "A" + G.ra + " " + G.ra + " 0 0 1 " + (G.bx - G.ra) + " " + G.by + "Z";
+  s.t = "M" + zp(B) + "L" + zp(zEdge(Z_TOP, 1)) + "L" + zp(zEdge(Z_TOP, -1)) + "Z";
+  zoneShapes.cache = { zones:z, sectors:s };
+  return zoneShapes.cache;
+}
+// where each label sits: [x, y] or [x, y, turn] for the corner strips, which are too narrow for level text
+var ZONE_LABELS = (function(){
+  var right = { "mid-rc":[400,40], "mid-rw":[402,166], "mid-rs":[341,220], "three-rc":[485,76,90], "three-rw":[457,256], "three-rs":[395,393] };
+  var out = { rim:[250,15], paint:[250,107], nail:[250,160], "mid-t":[250,265], "three-t":[250,345] };
+  Object.keys(right).forEach(function(id){
+    var a = right[id];
+    out[id] = a;
+    out[id.replace("-r", "-l")] = a.length === 3 ? [ZG.w - a[0], a[1], -a[2]] : [ZG.w - a[0], a[1]];
+  });
+  return out;
+})();
+var SECTOR_LABELS = { t:[250,335], rs:[402,430], rw:[455,262], rc:[410,60], ls:[98,430], lw:[45,262], lc:[90,60] };
+function zoneLabel(name, cell, at){
+  var num = cell && cell.att ? cell.made + "/" + cell.att + " " + zPct(cell) : "";
+  if(at.length === 3){
+    return '<text transform="rotate(' + at[2] + ' ' + at[0] + ' ' + at[1] + ')" x="' + at[0] + '" y="' + (at[1] + 4) + '">' +
+           '<tspan class="zl' + (num ? " has" : "") + '">' + name + '</tspan>' + (num ? '<tspan class="zn" dx="6">' + num + '</tspan>' : '') + '</text>';
+  }
+  return '<text class="zl' + (num ? " has" : "") + '" x="' + at[0] + '" y="' + at[1] + '">' + name + '</text>' +
+         (num ? '<text class="zn" x="' + at[0] + '" y="' + (at[1] + 15) + '">' + num + '</text>' : '');
+}
+// mode "zones" or "angles"; tally from zoneTally(); pick is the tapped spot, if any
+function zoneMapSVG(mode, tally, pick){
+  var sh = zoneShapes(), angles = mode === "angles";
+  var s = '<svg class="court zonemap" viewBox="0 0 500 470" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="' +
+          (angles ? "Half court divided into angle bands" : "Half court divided into shot zones") + '">';
+  var lab = "";
+  if(angles){
+    ZONE_SECTORS.forEach(function(sec){
+      var c = tally.sector[sec.id];
+      s += '<path class="zone ' + zShade(c) + '" data-zone="' + sec.id + '" d="' + sh.sectors[sec.id] + '"/>';
+      lab += zoneLabel(sec.short + " " + sec.deg, c, SECTOR_LABELS[sec.id]);
+    });
+  } else {
+    ZONES.slice().reverse().forEach(function(z){      // threes first, the rim last, so the small shapes sit on top
+      var c = tally.zone[z.id];
+      s += '<path class="zone ' + zShade(c) + '" data-zone="' + z.id + '" d="' + sh.zones[z.id] + '"/>';
+      lab += zoneLabel(z.short, c, ZONE_LABELS[z.id]);
+    });
+  }
+  s += halfCourtLines() + lab;
+  if(pick) s += '<circle class="pick" cx="' + (Math.round(pick.x * 5000) / 10) + '" cy="' + (Math.round(pick.y * 4700) / 10) + '" r="7"/>';
+  s += '</svg>';
+  var holder = document.createElement("div");
+  holder.innerHTML = s;
+  return holder.firstChild;
+}
+function zoneKey(){
+  var k = el("div",{cls:"zkey"},[el("span",{text:"FG%"})]);
+  [["zf1","under 25%"],["zf2","25–39%"],["zf3","40–54%"],["zf4","55% and up"]].forEach(function(o){
+    k.appendChild(el("span",{},[el("i",{cls:"zsw " + o[0]}), document.createTextNode(o[1])]));
+  });
+  k.appendChild(el("span",{text:"Shaded from " + Z_MIN_SHADE + " shots."}));
+  return k;
+}
+function zoneRow(cells, c, all, cls){
+  var tr = el("tr",{cls: cls || ""});
+  cells.forEach(function(text, i){ tr.appendChild(el("td",{cls: i ? "num" : "", text:text})); });
+  [c && c.att ? c.made + "/" + c.att : "—", zPct(c), zShare(c, all), zPps(c)].forEach(function(text){
+    tr.appendChild(el("td",{cls:"num",text:text})); });
+  return tr;
+}
+function zoneTable(t){
+  var tbl = el("table",{cls:"zonetable"}), tb = el("tbody"), tf = el("tfoot");
+  tbl.innerHTML = "<thead><tr><th>Zone</th><th>FG</th><th>FG%</th><th>Share</th><th>Pts/shot</th></tr></thead>";
+  ZONE_RANGES.forEach(function(r){
+    var kids = ZONES.filter(function(z){ return z.range === r[0] && z.sector; });
+    tb.appendChild(zoneRow([r[1]], t.range[r[0]], t.all, kids.length ? "zgroup" : ""));
+    kids.forEach(function(z){ if(t.zone[z.id]) tb.appendChild(zoneRow([z.name], t.zone[z.id], t.all, "zsub")); });
+  });
+  tf.appendChild(zoneRow(["All charted shots"], t.all, t.all));
+  tbl.appendChild(tb); tbl.appendChild(tf);
+  return tbl;
+}
+function angleTable(t){
+  var tbl = el("table",{cls:"zonetable"}), tb = el("tbody"), tf = el("tfoot");
+  tbl.innerHTML = "<thead><tr><th>Angle</th><th>From straight on</th><th>FG</th><th>FG%</th><th>Share</th><th>Pts/shot</th></tr></thead>";
+  ZONE_SECTORS.forEach(function(sec){ tb.appendChild(zoneRow([sec.name, sec.deg], t.sector[sec.id], t.all)); });
+  tf.appendChild(zoneRow(["Left side", ""], t.side.l, t.all));
+  tf.appendChild(zoneRow(["Right side", ""], t.side.r, t.all));
+  tf.appendChild(zoneRow(["All charted shots", ""], t.all, t.all));
+  tbl.appendChild(tb); tbl.appendChild(tf);
+  return tbl;
+}
+// one row per shot, oldest first, with names: for a spreadsheet, not for importing back
+function shotsCSV(list){
+  var rows = [["date","game","period","clock","team","player","jersey","shot","made","points","zone","area","angle","side",
+               "distance_ft","angle_deg","x","y","assisted_by","session_id","event_id","player_id"]];
+  var sideName = { l:"left", m:"middle", r:"right" };
+  list.slice().sort(function(a, b){ return (a.sess.date - b.sess.date) || (a.e.t - b.e.t); }).forEach(function(s){
+    var e = s.e, sess = s.sess, p = player(e.pid), z = s.z, ast = e.miss ? null : assistFor(sess, e.id);
+    rows.push([dstamp(sess.date), noFormula(sess.teams[0].name + " vs " + sess.teams[1].name), e.period || "",
+      typeof e.clk === "number" ? fmtClock(e.clk) : "", noFormula((sess.teams[e.team] || {}).name || ""),
+      noFormula(pname(e.pid)), noFormula(p && p.num != null ? String(p.num) : ""), noFormula(s.st.short || e.key),
+      e.miss ? 0 : 1, e.miss ? 0 : (s.st.pts || 0),
+      z ? z.zone.name : "", z ? rangeName(z.zone.range) : "", z ? sectorById(z.sector).name : "", z ? sideName[z.side] : "",
+      z ? z.ft : "", z ? Math.round(z.deg) : "", nz(e.x), nz(e.y), ast ? noFormula(pname(ast.pid)) : "", sess.id, e.id, e.pid]);
+  });
+  return toCSV(rows);
+}
+
+/* ---------- the Zones tab ---------- */
+function viewZones(v){
+  v.appendChild(el("h2",{text:"Shot zones"}));
+  v.appendChild(el("p",{cls:"sub",text:"Every charted shot is named by where it was taken. Left and right are as you face the basket."}));
+  var games = zoneGames(), scope = zoneScope(), sessions = zoneSessions(), single = scope !== "all";
+  var mode = UI.zoneView === "angles" || UI.zoneView === "dots" ? UI.zoneView : "zones";
+  var opts = sessions.length ? zoneFilterOptions(sessions, single) : [["all","Everyone"]];
+  var f = opts.some(function(o){ return o[0] === UI.zoneFilter; }) ? UI.zoneFilter : "all";
+  var list = zoneShots(sessions, f), t = zoneTally(list);
+
+  var ctl = el("div",{cls:"card noprint zonectl"});
+  if(games.length){
+    var gsel = el("select",{"aria-label":"Which games"});
+    gsel.appendChild(el("option",{value:"all",text:"All games (" + games.length + ")"}));
+    games.forEach(function(s){ gsel.appendChild(el("option",{value:s.id,text:zoneGameName(s) + (s.id === S.activeId ? " · open" : "")})); });
+    gsel.value = scope;
+    gsel.onchange = function(){ UI.zoneScope = gsel.value; UI.zoneFilter = "all"; render(); };
+    var fsel = el("select",{"aria-label":"Whose shots"});
+    opts.forEach(function(o){ fsel.appendChild(el("option",{value:o[0],text:o[1]})); });
+    fsel.value = f;
+    fsel.onchange = function(){ UI.zoneFilter = fsel.value; render(); };
+    ctl.appendChild(el("div",{cls:"grid2",style:"margin-bottom:10px"},[
+      el("div",{},[el("label",{cls:"f",text:"Games"}), gsel]),
+      el("div",{},[el("label",{cls:"f",text:"Whose shots"}), fsel]) ]));
+  }
+  var views = el("div",{cls:"chips zoneviews"});
+  [["zones","Zones"],["angles","Angles"],["dots","Dots"]].forEach(function(o){
+    views.appendChild(el("button",{cls:"chip","aria-pressed": mode === o[0] ? "true" : "false", text:o[1],
+      on:{click:function(){ UI.zoneView = o[0]; render(); }}}));
+  });
+  ctl.appendChild(views);
+  v.appendChild(ctl);
+
+  var who = "";
+  opts.forEach(function(o){ if(o[0] === f) who = o[1]; });
+  var card = el("div",{cls:"card"});
+  if(games.length) card.appendChild(el("p",{cls:"sub zonecap",style:"margin:0 0 10px",
+    text: (single ? zoneGameName(sessions[0]) : "All games (" + games.length + ")") + " · " + who}));
+  if(mode === "dots"){
+    // one game: the two teams, as on the box score. Several games: our players and opponents,
+    // because which team is listed first changes from game to game.
+    var anyOpp = sessions.some(function(x){ return (x.teams || []).some(function(side){ return !!side.opp; }); });
+    card.appendChild(courtSVG(list.filter(function(s){ return !!s.z; }).map(function(s){
+      var red = single ? s.e.team === 1 : !!((s.sess.teams || [])[s.e.team] || {}).opp;
+      return { x:s.e.x, y:s.e.y, miss:!!s.e.miss, side: red ? "a" : "h" }; })));
+    card.appendChild(el("p",{cls:"sub zonedots",style:"margin:8px 0 0",text:"● made   ✕ missed" +
+      (single ? ". " + sessions[0].teams[0].name + " in teal, " + sessions[0].teams[1].name + " in red."
+              : anyOpp ? ". Our players in teal, opponents in red." : "")}));
+  } else {
+    var map = zoneMapSVG(mode, t, UI.zonePick);
+    map.addEventListener("click", function(ev){
+      var r = map.getBoundingClientRect(); if(!r.width) return;
+      UI.zonePick = { x: Math.min(1, Math.max(0, (ev.clientX - r.left) / r.width)),
+                      y: Math.min(1, Math.max(0, (ev.clientY - r.top) / r.height)) };
+      render();
+    });
+    card.appendChild(map);
+    card.appendChild(zoneKey());
+    card.appendChild(el("p",{cls:"sub zonepick" + (UI.zonePick ? "" : " noprint"),style:"margin:6px 0 0",
+      text: UI.zonePick ? "That spot: " + spotText(zoneAt(UI.zonePick.x, UI.zonePick.y))
+                        : "Tap anywhere on the court to name the spot."}));
+  }
+  v.appendChild(card);
+
+  if(!games.length){
+    v.appendChild(el("p",{cls:"sub",text:"No games yet. Once shots are charted in a game, each zone shows its makes, attempts and FG%."}));
+    return;
+  }
+  if(!t.all.att){
+    v.appendChild(el("p",{cls:"sub zonenone",text:"No charted shots here yet. Turn on Chart shots on the game screen and each 2P or 3P tap will ask where it was taken."}));
+  } else if(mode === "angles"){
+    v.appendChild(el("div",{cls:"tw"},[angleTable(t)]));
+  } else {
+    v.appendChild(el("div",{cls:"tw"},[zoneTable(t)]));
+  }
+  var notes = [], ft = zoneFreeThrows(sessions, f);
+  if(t.loose.att) notes.push(t.loose.att + (t.loose.att === 1 ? " more shot has" : " more shots have") + " no spot (" + t.loose.made +
+    " made), so " + (t.loose.att === 1 ? "it isn't" : "they aren't") + " in a zone.");
+  if(ft.att) notes.push("Free throws: " + ft.made + " of " + ft.att + " (" + Math.round(ft.made / ft.att * 100) + "%)" +
+    (single ? "." : ", from the games where misses were recorded."));
+  if(t.all.att) notes.push("Misses are only recorded while Chart shots is on, so these numbers cover the stretches you charted.");
+  if(notes.length){
+    var nl = el("div",{cls:"zonenotes"});
+    notes.forEach(function(n){ nl.appendChild(el("p",{cls:"sub",style:"margin:0 0 6px",text:n})); });
+    v.appendChild(nl);
+  }
+  v.appendChild(el("div",{cls:"btns noprint",style:"margin-top:14px"},[
+    el("button",{cls:"btn",text:"Export shots CSV",on:{click:function(){
+      download("shots-" + dstamp(Date.now()) + ".csv", shotsCSV(list), "text/csv;charset=utf-8"); }}}),
+    el("button",{cls:"btn",text:"Print",on:{click:function(){ window.print(); }}})
+  ]));
 }
 
 /* ---------- practice workflow ---------- */
@@ -1748,6 +2744,7 @@ function entryPanel(){
 function tapStat(st, pid){
   if(!isTally(st)){ UI.entry = { pid:pid, key:st.key }; swStop(); render(); return; }
   if(isShot(st) && S.prefs && S.prefs.chartShots){ UI.shot = { pid:pid, key:st.key, made:true }; render(); return; }
+  if(isSpot(st) && S.prefs && S.prefs.chartShots){ UI.shot = { pid:pid, key:st.key, made:true, spot:true }; render(); return; }   // v4.12
   record(st.key, undefined, pid);
 }
 
@@ -1762,6 +2759,7 @@ function viewPractice(v, sess){
 
   v.appendChild(el("h2",{text: sess.title || "Practice"}));
   v.appendChild(el("p",{cls:"sub",text:"Pick a drill, then a player. One session holds every drill you run today."}));
+  [addPanel(sess), editPanel(sess)].forEach(function(x){ if(x) v.appendChild(x); });   // v4.10
 
   var chips = el("div",{cls:"chips",style:"margin-bottom:14px"});
   on.forEach(function(s){
@@ -1793,7 +2791,8 @@ function viewPractice(v, sess){
     } else {
       dock.appendChild(el("div",{cls:"who"},[
         el("strong",{text:pname(UI.sel) + " · " + st.label}),
-        el("button",{cls:"btn sm",text:"Clear",on:{click:function(){ UI.sel=null; render(); }}})
+        el("span",{cls:"btns",style:"margin:0"},[el("button",{cls:"btn sm",text:"Edit",on:{click:function(){ UI.editing = UI.sel; UI.adding = null; render(); }}}),
+        el("button",{cls:"btn sm",text:"Clear",on:{click:function(){ UI.sel=null; render(); }}})])
       ]));
       dock.appendChild(entryWidget(st, UI.sel, null));
     }
@@ -1802,17 +2801,7 @@ function viewPractice(v, sess){
   
   // add player and stat buttons for practice
   var addP = el("button",{cls:"btn",text:"+ Player"});
-  addP.addEventListener("click", function(){
-    var name = window.prompt("Player name:");
-    var nm0 = cleanPlayerName(name);
-    if(!nm0.value) return;
-    if(nm0.error){ toast(cap(nm0.error)); return; }
-    var newP = { id:uid("p"), name:nm0.value, desc:"", aliases:[], num:"", notes:"", active:true, cat:MISC_ID };
-    S.players.push(newP);
-    sess.playerIds.push(newP.id);
-    save(); render();
-    toast(name + " added to practice");
-  });
+  addP.addEventListener("click", function(){ UI.adding = { q: "" }; UI.editing = null; render(); });   // v4.10
   dock.appendChild(addP);
   
   var addS = el("button",{cls:"btn",text:"+ Stat"});
@@ -1843,8 +2832,10 @@ function drillAttemptCard(sess){
   var card = el("div",{cls:"card drillcard",style:"margin-top:20px"});
   card.appendChild(el("h3",{text:"Drills",style:"margin:0 0 6px"}));
   var list = practiceDrills();
-  if(!list.length){
+  if(!S.drills || !S.drills.length){
     card.appendChild(el("p",{cls:"sub",text:"No drills yet. Import your drills CSV to add them."}));
+  } else if(!list.length){
+    card.appendChild(el("p",{cls:"sub",text:"No drills are on. Switch some on under Manage drills below."}));
   } else {
     UI.attempt = UI.attempt || {};
     if(!list.some(function(d){ return d.id === UI.attempt.drillId; })) UI.attempt = { drillId: list[0].id, pids: [], vals: [], note: "" };
@@ -1854,32 +2845,60 @@ function drillAttemptCard(sess){
     if(picked.description) card.appendChild(el("p",{cls:"sub",style:"margin:0 0 10px",text:picked.description}));
     card.appendChild(isBatchDrill(picked) ? drillBatch(sess, picked) : drillGroupEntry(sess, picked));
   }
+  if(S.drills && S.drills.length) card.appendChild(manageDrills(sess));   // v4.11
   card.appendChild(drillFileButtons());
   if(UI.drillReport) card.appendChild(drillReportNote(UI.drillReport));
   return card;
 }
 function pickDrill(id){ UI.attempt = { drillId: id, pids: [], vals: [], note: "" }; UI.batch = null; render(); }
+// open/closed state is kept in UI by a stable key, so a re-render doesn't fold a section back up
+function areaSection(key, label, openByDefault, body){
+  var det = el("details",{cls:"area"});
+  det.open = (UI.areaOpen && key in UI.areaOpen) ? UI.areaOpen[key] : openByDefault;
+  det.addEventListener("toggle", function(){ UI.areaOpen = UI.areaOpen || {}; UI.areaOpen[key] = det.open; });
+  det.appendChild(el("summary",{text: label}));
+  det.appendChild(body);
+  return det;
+}
 function drillPicker(list, picked){
-  if(list.length <= 8){
-    var chips = el("div",{cls:"chips",style:"margin-bottom:12px"});
-    list.forEach(function(d){
+  var wrap = el("div",{cls:"areas",style:"margin-bottom:12px"});
+  var areas = drillAreas(list);
+  areas.forEach(function(area){
+    var chips = el("div",{cls:"chips",style:"margin:8px 0"});
+    area.drills.forEach(function(d){
       var g = drillGroupRange(d), n = drillValueCount(d), suffix = "";
       if(g.min === g.max && g.min > 1) suffix = " (" + g.min + ")";
       else if(n > 1) suffix = " (" + n + " stages)";
       chips.appendChild(el("button",{cls:"chip","aria-pressed": d.id === picked.id ? "true" : "false",
         text: d.name + suffix, on:{click:function(){ pickDrill(d.id); }}}));
     });
-    return chips;
-  }
-  var sel = el("select",{cls:"drillsel","aria-label":"Drill",style:"width:100%;margin-bottom:10px"});
-  list.forEach(function(d){
-    var o = document.createElement("option"), n = drillValueCount(d);
-    o.value = d.id; o.textContent = d.name + (n > 1 ? " (" + n + " stages)" : "");
-    sel.appendChild(o);
+    var holdsPick = area.drills.some(function(d){ return d.id === picked.id; });
+    wrap.appendChild(areaSection("pick:" + area.name, area.name + " (" + area.drills.length + ")", holdsPick || areas.length <= 2, chips));
   });
-  sel.value = picked.id;
-  sel.addEventListener("change", function(){ pickDrill(sel.value); });
-  return sel;
+  return wrap;
+}
+function manageDrills(){
+  var det = el("details",{cls:"manage",style:"margin-top:14px"});
+  det.open = !!UI.manageOpen;
+  det.addEventListener("toggle", function(){ UI.manageOpen = det.open; });
+  det.appendChild(el("summary",{text:"Manage drills (" + activeDrillCount() + " of " + MAX_ACTIVE_DRILLS + " on)"}));
+  det.appendChild(el("p",{cls:"sub",style:"margin:8px 0",
+    text:"Switch on the drills you're working on. Switched-off drills stay saved, and you can turn them back on any time. Up to " + MAX_ACTIVE_DRILLS + " can be on at once."}));
+  drillAreas(S.drills || []).forEach(function(area){
+    var on = area.drills.filter(isOn).length;
+    var body = el("div",{cls:"chips",style:"margin:8px 0"});
+    area.drills.forEach(function(d){
+      body.appendChild(el("button",{cls:"chip","aria-pressed": isOn(d) ? "true" : "false",
+        text: (isOn(d) ? "On · " : "Off · ") + d.name,
+        on:{click:function(){
+          var was = isOn(d), r = setDrillOn(d, !was);
+          if(r.error) toast(r.error); else toast(d.name + (was ? " off" : " on"));
+          render();
+        }}}));
+    });
+    det.appendChild(areaSection("manage:" + area.name, area.name + "  ·  " + on + " on (" + area.drills.length + ")", false, body));
+  });
+  return det;
 }
 function levelChips(current, onPick){
   var row = el("div",{cls:"lvls"});
@@ -1967,7 +2986,7 @@ function drillFileButtons(){
   var row = el("div",{cls:"btns noprint",style:"margin-top:14px"});
   row.appendChild(el("button",{cls:"btn",text:"Import drills CSV",on:{click:function(){
     var inp = document.createElement("input");
-    inp.type = "file";   // no type filter: iOS hides CSVs it can't match to one
+    inp.type = "file"; inp.accept = ".csv,text/csv";   // v4.11: CSV files only
     inp.onchange = function(){
       var f = inp.files[0]; if(!f) return;
       var r = new FileReader();
@@ -1989,6 +3008,7 @@ function drillReportLine(rep){
   if(rep.updated) parts.push(rep.updated + " filled in");
   if(rep.same) parts.push(rep.same + " already here");
   if(rep.skipped.length) parts.push(rep.skipped.length + " skipped");
+  if(rep.off && rep.off.length) parts.push(rep.off.length + " saved off (" + MAX_ACTIVE_DRILLS + " on at most)");
   return "Drills: " + parts.join(", ");
 }
 function drillReportNote(rep){
@@ -2075,7 +3095,7 @@ function attemptsListCard(sess){
 /* ---------- new session ---------- */
 function viewNewSession(v){
   if(!UI.setup) UI.setup = { kind:"game", title:"", format:"quarters", periodMin:8,
-                             names:["Black","White"], picks:[[],[]], pracIds:[] };
+                             names:["Black","White"], picks:[[],[]], opp:[null,null], pracIds:[] };
   var c = UI.setup;
   pickerFor.draws = [];   // every picker on this screen redraws when any of them changes
   v.appendChild(el("h2",{text:"New session"}));
@@ -2095,8 +3115,11 @@ function viewNewSession(v){
   }
 
   if(c.kind === "game"){
+    if(!c.opp) c.opp = [null, null];
     [0,1].forEach(function(ti){
       var box = el("div",{cls:"card"});
+      box.appendChild(sideKindChips(c, ti));   // v4.10: J17 players, or an opponent team
+      if(c.opp[ti]){ box.appendChild(oppTeamPicker(c, ti)); v.appendChild(box); return; }
       box.appendChild(el("label",{cls:"f",text:"Team " + (ti+1) + " name"}));
       var ni = el("input",{type:"text",value:c.names[ti]});
       ni.addEventListener("input", function(){ c.names[ti] = ni.value; });
@@ -2113,10 +3136,9 @@ function viewNewSession(v){
     v.appendChild(el("div",{cls:"card"},[el("label",{cls:"f",text:"Periods"}), fmt,
       el("div",{style:"height:10px"}), el("label",{cls:"f",text:"Minutes per period — sets the game clock"}), pl]));
     v.appendChild(el("button",{cls:"btn solid wide",text:"Start game",on:{click:function(){
-      if(!c.picks[0].length || !c.picks[1].length){ toast("Pick players for both teams"); return; }
-      startSession({ kind:"game", format:c.format, periodMin:c.periodMin || 8,
-        teams:[{name:c.names[0]||"Team 1",playerIds:c.picks[0].slice()},
-               {name:c.names[1]||"Team 2",playerIds:c.picks[1].slice()}] });
+      var sides = gameSidesFromSetup(c);
+      if(sides.error){ toast(sides.error); return; }
+      startSession({ kind:"game", format:c.format, periodMin:c.periodMin || 8, teams:sides });
     }}}));
   } else {
     var box2 = el("div",{cls:"card"});
@@ -2196,6 +3218,57 @@ function pickerFor(list, other){
   }
   draw();
   return wrap;
+}
+function sideKindChips(c, ti){
+  var row = el("div",{cls:"chips",style:"margin-bottom:10px"});
+  [["J17 players", false], ["Opponent team", true]].forEach(function(o){
+    row.appendChild(el("button",{cls:"chip","aria-pressed": (!!c.opp[ti]) === o[1] ? "true" : "false", text:o[0],
+      on:{click:function(){ c.opp[ti] = o[1] ? (c.opp[ti] || { id: "", name: "" }) : null; render(); }}}));
+  });
+  return row;
+}
+function oppTeamPicker(c, ti){
+  var o = c.opp[ti], wrap = el("div",{}), teams = (S.oppTeams || []).slice().sort(function(a, b){ return a.name.localeCompare(b.name); });
+  if(teams.length){
+    wrap.appendChild(el("label",{cls:"f",text:"Opponent team"}));
+    var sel = el("select",{"aria-label":"Opponent team"});
+    var o0 = document.createElement("option"); o0.value = ""; o0.textContent = "A new team\u2026"; sel.appendChild(o0);
+    teams.forEach(function(t){
+      var op = document.createElement("option"); op.value = t.id;
+      op.textContent = t.name + " (" + oppPlayersOf(t.id).filter(function(p){ return !p.retired; }).length + " known)";
+      sel.appendChild(op);
+    });
+    sel.value = o.id || "";
+    sel.addEventListener("change", function(){ o.id = sel.value; render(); });
+    wrap.appendChild(sel);
+  }
+  if(!o.id){
+    wrap.appendChild(el("label",{cls:"f",text:"New opponent team name"}));
+    var ni = el("input",{type:"text",value:o.name || "",placeholder:"e.g. Richmond Raiders U12","aria-label":"Opponent team name"});
+    ni.addEventListener("input", function(){ o.name = ni.value; });
+    wrap.appendChild(ni);
+  }
+  wrap.appendChild(el("p",{cls:"sub",style:"margin:8px 0 0",text:"Add their players by jersey number once the game starts. Players from earlier games are remembered."}));
+  return wrap;
+}
+function gameSidesFromSetup(c){
+  var opp = c.opp || [null, null], out = [];
+  for(var k = 0; k < 2; k++){
+    if(opp[k]){
+      if(!opp[k].id){
+        var r = cleanLabel(opp[k].name || "", 60);
+        if(!r.value) return { error: "Name the opponent team" };
+        if(r.error) return { error: "Opponent team name " + r.error };
+      }
+    } else if(!c.picks[k].length) return { error: "Pick players for both teams" };
+  }
+  for(var i = 0; i < 2; i++){
+    if(opp[i]){
+      var t = opp[i].id ? oppTeamById(opp[i].id) : addOppTeam(opp[i].name);
+      out.push({ name: t.name, playerIds: [], opp: t.id });
+    } else out.push({ name: c.names[i] || ("Team " + (i + 1)), playerIds: c.picks[i].slice() });
+  }
+  return out;
 }
 function startSession(cfg){
   var sess = { id:uid("s"), date:Date.now(), kind:cfg.kind, title:cfg.title || "",
@@ -2409,7 +3482,7 @@ function viewLog(v){
     var meta = [];
     if(e.period) meta.push(e.period);
     if(typeof e.clk === "number") meta.push(fmtClock(e.clk));
-    if(typeof e.x === "number") meta.push("charted");
+    if(typeof e.x === "number") meta.push(isShot(statByKey(e.key)) && zonable(e) ? zoneOf(e).zone.name : "charted");   // v4.13
     meta.push(new Date(e.t).toLocaleTimeString([], {hour:"2-digit",minute:"2-digit"}));
     var li = el("li");
     li.appendChild(el("div",{},[
@@ -2486,7 +3559,7 @@ function viewPlayers(v){
   importExport.appendChild(el("button",{cls:"btn",text:"Import players CSV",
     on:{click:function(){
       var inp = document.createElement("input");
-      inp.type = "file";   // no type filter: iOS hides CSVs it can't match to one
+      inp.type = "file"; inp.accept = ".csv,text/csv";   // v4.11: CSV files only
       inp.onchange = function(){
         var f = inp.files[0]; if(!f) return;
         parseXlsx(f).then(function(isExcel){
@@ -2605,6 +3678,7 @@ function viewPlayers(v){
   }
 
   v.appendChild(categoriesCard(counts));
+  var oc = opponentsCard(); if(oc) v.appendChild(oc);   // v4.10
   if(S.players.length) v.appendChild(deleteAllCard());
 }
 function playerCard(p){
@@ -2710,6 +3784,48 @@ function removeCategory(c, n){
   S.categories = S.categories.filter(function(x){ return x.id !== c.id; });
   if(UI.catFilter === c.id) UI.catFilter = "all";
   save(); render(); toast("Removed " + c.name);
+}
+function opponentsCard(){
+  var teams = (S.oppTeams || []).slice().sort(function(a, b){ return a.name.localeCompare(b.name); });
+  if(!teams.length) return null;
+  var card = el("div",{cls:"card oppcard"});
+  card.appendChild(el("label",{cls:"f",text:"Opponents"}));
+  card.appendChild(el("p",{cls:"sub",style:"margin:0 0 6px",
+    text:"Kept apart from your roster. Each opponent keeps one id across games. If two entries are the same kid, merge them."}));
+  teams.forEach(function(t){
+    var tn = el("input",{type:"text",value:t.name,"aria-label":"Opponent team name",cls:"oppteam"});
+    tn.addEventListener("change", function(){ if(!renameOppTeam(t, tn.value)) toast("That name can't be used"); render(); });
+    card.appendChild(tn);
+    var ps = oppPlayersOf(t.id).sort(byJersey);
+    if(!ps.length) card.appendChild(el("div",{cls:"sub",text:"No players yet."}));
+    ps.forEach(function(p){
+      var row = el("div",{cls:"bctl opprow"});
+      row.appendChild(el("span",{cls:"jno num",text: jersey(p) || "#?"}));
+      var nm = el("input",{type:"text",value:p.name || "",placeholder:"Name (optional)","aria-label":"Name for " + jersey(p)});
+      nm.addEventListener("change", function(){ var r = cleanPlayerName(nm.value); if(r.error){ toast(cap(r.error)); return; } p.name = r.value; save(); });
+      row.appendChild(nm);
+      if(p.retired) row.appendChild(el("span",{cls:"sub",text:"earlier"}));
+      var others = ps.filter(function(x){ return x.id !== p.id; });
+      if(others.length){
+        var sel = el("select",{"aria-label":"Same kid as"});
+        var o0 = document.createElement("option"); o0.value = ""; o0.textContent = "Same kid as\u2026"; sel.appendChild(o0);
+        others.forEach(function(x){ var o = document.createElement("option"); o.value = x.id; o.textContent = benchName(x) + (x.retired ? " (earlier)" : ""); sel.appendChild(o); });
+        sel.addEventListener("change", function(){
+          if(!sel.value) return;
+          var keep = player(sel.value);
+          if(confirm("Merge " + benchName(p) + " into " + benchName(keep) + "? Their stats become one player.")){
+            mergeOpponents(p.id, keep.id); toast("Merged into " + benchName(keep));
+          }
+          render();
+        });
+        row.appendChild(sel);
+      }
+      card.appendChild(row);
+    });
+  });
+  card.appendChild(el("button",{cls:"btn",style:"margin-top:12px",text:"Export opponents CSV",on:{click:function(){
+    download("opponents.csv", opponentsCSV(), "text/csv;charset=utf-8"); }}}));
+  return card;
 }
 function deleteAllCard(){
   var n = S.players.length;
@@ -3134,13 +4250,13 @@ function sessionsCSV(){
   return rows.map(toCSVLine).join("\n");
 }
 function eventsCSV(){
-  var rows = [["id","session_id","player_id","stat_key","value","period","team","timestamp","made","x","y","clock"]];
+  var rows = [["id","session_id","player_id","stat_key","value","period","team","timestamp","made","x","y","clock","assist_for","court"]];
   S.sessions.forEach(function(s){
     s.events.forEach(function(e){
       var st = statByKey(e.key);
       var val = e.v === null || e.v === undefined ? "" : (typeof e.v === "boolean" ? String(e.v) : e.v);
       rows.push([e.id, s.id, e.pid, e.key, val, e.period || "", nz(e.team), e.t,
-        isShot(st) ? (e.miss ? "0" : "1") : "", nz(e.x), nz(e.y), nz(e.clk)]);
+        isShot(st) ? (e.miss ? "0" : "1") : "", nz(e.x), nz(e.y), nz(e.clk), e.shot || "", e.court || ""]);
     });
   });
   return rows.map(toCSVLine).join("\n");
@@ -3154,10 +4270,11 @@ function drillsCSV(){
     var base = [d.id, d.name, d.short || "", typeof d.groupSize === "number" ? d.groupSize : 1, m0,
                 none(d.unit), d.better || stageBetter(d, 0), m0 === "makes" ? (d.outOf || 10) : "none",
                 none(d.timeLimit), none(noFormula(d.description || "")), d.active === false ? "false" : "true"];
+    var areaCell = none(noFormula(d.area || ""));
     for(var i = 0; i < drillValueCount(d); i++){
       var sm = stageMeasure(d, i);
       rows.push(base.concat([i + 1, stageName(d, i), sm, none(stageUnit(d, i)), stageBetter(d, i),
-        sm === "makes" ? stageOutOf(d, i) : "none", none(stageTimeLimit(d, i))]));
+        sm === "makes" ? stageOutOf(d, i) : "none", none(stageTimeLimit(d, i)), areaCell]));
     }
   });
   return rows.map(function(r){ return toCSVLine(r.map(none)); }).join("\n");
@@ -3396,6 +4513,8 @@ function importEventsCSV(text){
     if(row.made === "0") e.miss = true;
     if(row.x !== undefined && row.x !== "" && !isNaN(parseFloat(row.x))){ e.x = parseFloat(row.x); e.y = parseFloat(row.y); }
     if(row.clock !== undefined && row.clock !== "" && !isNaN(parseFloat(row.clock))) e.clk = parseFloat(row.clock);
+    if(row.assist_for) e.shot = row.assist_for;   // v4.12
+    if(row.court === "full") e.court = "full";    // v4.12.2
     sess.events.push(e);
     added++;
   });
@@ -3450,7 +4569,7 @@ function csvKind(text){
 }
 function importCSVFiles(){
   var inp = document.createElement("input");
-  inp.type = "file"; inp.multiple = true;   // no type filter: files are identified by their header row
+  inp.type = "file"; inp.multiple = true; inp.accept = ".csv,text/csv";   // v4.11: CSV files only
   inp.onchange = function(){
     var files = Array.prototype.slice.call(inp.files || []);
     if(!files.length) return;
@@ -3481,7 +4600,8 @@ function importCSVFiles(){
 function exportAllCSVs(){
   var files = [["stats.csv", statsCSV()], ["players.csv", playersCSV()],
                ["sessions.csv", sessionsCSV()], ["events.csv", eventsCSV()],
-               ["drills.csv", drillsCSV()], ["attempts.csv", attemptsCSV()]];
+               ["drills.csv", drillsCSV()], ["attempts.csv", attemptsCSV()],
+               ["opponents.csv", opponentsCSV()]];
   // spaced out: some browsers drop downloads fired in the same instant
   files.forEach(function(f, i){
     setTimeout(function(){ download(f[0], f[1], "text/csv;charset=utf-8"); }, i * 350);

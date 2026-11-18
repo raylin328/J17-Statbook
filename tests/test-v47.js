@@ -233,7 +233,7 @@ function seededPractice(w) {
     if (cards[i].classList.contains("drillcard")) { mnCard = cards[i]; break; }
   }
   ok("M:N card rendered", !!mnCard);
-  var chips = mnCard.querySelectorAll(".chip");
+  var chips = mnCard.querySelectorAll(".areas .chip");   // v4.11: the picker only (Manage drills has its own chips)
   ok("chips rendered", chips.length >= 2, "chips=" + chips.length);
   // click 3-Man Weave chip
   var weaveChip = null;
@@ -274,7 +274,7 @@ function seededPractice(w) {
   w.recordAttempt(d2s.id, ["p_a"], [2.1, 3.8, 1.2]);
   // drills catalog
   var dcsv = w.drillsCSV().split("\n");
-  eq("drills header", dcsv[0], "id,name,short,group_size,measure,unit,better,out_of,time_limit_s,description,active,stage_number,stage_name,stage_measure,stage_unit,stage_better,stage_out_of,stage_time_limit_s");
+  eq("drills header", dcsv[0], "id,name,short,group_size,measure,unit,better,out_of,time_limit_s,description,active,stage_number,stage_name,stage_measure,stage_unit,stage_better,stage_out_of,stage_time_limit_s,area");
   // 6 solo-single-stage rows + 3 D2S stage rows + 1 weave row = 10 data rows
   var d2sRows = dcsv.filter(function(r) { return /Defender to Shot/.test(r); });
   eq("d2s written as 3 stage rows", d2sRows.length, 3);

@@ -22,7 +22,8 @@ const mk = dom => {
     click: e => e.dispatchEvent(new dom.window.Event("click", { bubbles: true })),
     type(el, v) { el.value = v; el.dispatchEvent(new dom.window.Event("input", { bubbles: true })); },
     byText(sel, t) { return Array.from(d.querySelectorAll(sel)).find(e => e.textContent.trim().startsWith(t)); },
-    nav(i) { this.click(Array.from(d.querySelectorAll("#nav button"))[i]); }
+    // tabs by their place in the original seven; Zones (v4.13) is skipped so these numbers still mean the same tabs
+    nav(i) { this.click(Array.from(d.querySelectorAll("#nav button")).filter(b => b.textContent !== "Zones")[i]); }
   };
 };
 
@@ -30,7 +31,7 @@ const mk = dom => {
 let A = mk(boot(null));
 A.w.eval("S.prefs.gameView = 'tiles'; save();");  // this suite drives the tile workflow
 ok("boots clean", !!A.$("#view"));
-ok("seven tabs", A.$$("#nav button").length === 7, A.$$("#nav button").length + "");
+ok("eight tabs (Zones added in v4.13)", A.$$("#nav button").length === 8, A.$$("#nav button").length + "");
 ok("asks for players first", /No players yet/.test(A.$("#view").textContent));
 
 // add three players
@@ -77,7 +78,7 @@ A.click(A.byText(".act", "Def. rebound"));   // v4.7.1: rebounds split O/D
 A.click(A.byText(".act", "Block"));
 A.click(A.byText(".act", "Foul"));
 ok("non-scoring stats don't score", A.$(".tscore").textContent === "6");
-ok("tile shows the line", A.$$(".plr")[0].textContent.indexOf("6 · 0 · 1 · 0 · 0 · 1 · 1 · 0") > -1,
+ok("tile shows the line", A.$$(".plr")[0].textContent.indexOf("6 · 0 · 0 · 1 · 0 · 0 · 1 · 1 · 0") > -1,
   A.$$(".plr")[0].textContent);
 
 // other team
@@ -94,9 +95,9 @@ A.nav(1);
 ok("two box tables", A.$$("table").length === 2);
 const cells = tr => Array.from(tr.children).map(td => td.textContent.replace(/\s+/g, " ").trim());
 const head = cells(A.$$("table")[0].querySelector("thead tr"));
-ok("box columns from catalog", head.join("|") === "Player|PTS|2P|3P|1P|OREB|DREB|REB|AST|STL|BLK|PF|TO", head.join("|"));
+ok("box columns from catalog", head.join("|") === "Player|PTS|2P|3P|1P|FTX|OREB|DREB|REB|AST|STL|BLK|PF|TO", head.join("|"));
 ok("Riley line correct", cells(A.$$("table")[0].querySelector("tbody tr")).join("|")
-  === "Riley Park|6|1|1|1|0|1|1|0|0|1|1|0", cells(A.$$("table")[0].querySelector("tbody tr")).join("|"));
+  === "Riley Park|6|1|1|1|0|0|1|1|0|0|1|1|0", cells(A.$$("table")[0].querySelector("tbody tr")).join("|"));
 const scoreInputs = A.$$("#view input[type=number]");
 A.type(scoreInputs[0], "10");
 A.type(scoreInputs[1], "8");

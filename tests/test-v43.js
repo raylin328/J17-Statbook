@@ -47,13 +47,13 @@ const pdf = "%PDF-1.7\n%\u00e2\u00e3\u00cf\u00d3\n1 0 obj\n<< /Type /Catalog >>\
     const A = boot();
     A.ev("UI.tab='players'; render();");
     A.click(A.byText("Import players CSV"));
-    ok("Players import opens an unfiltered picker", A.lastInput().type === "file" && !A.lastInput().accept, A.lastInput().accept);
+    ok("Players import opens a CSV-only picker", A.lastInput().type === "file" && A.lastInput().accept === ".csv,text/csv", A.lastInput().accept);
     A.ev("UI.tab='sessions'; render();");
     A.click(A.byText("Import CSVs"));
-    ok("Import CSVs opens an unfiltered picker", !A.lastInput().accept && A.lastInput().multiple === true);
+    ok("Import CSVs opens a CSV-only picker", A.lastInput().accept === ".csv,text/csv" && A.lastInput().multiple === true);
     A.click(A.byText("Restore (JSON)"));
     ok("Restore opens an unfiltered picker", !A.lastInput().accept);
-    ok("no accept filter anywhere in the app", !/\.accept\s*=/.test(html));
+    ok("CSV-only filter on the three CSV pickers (v4.11)", (html.match(/\.accept = "\.csv,text\/csv"/g) || []).length === 3);
   }
 
   console.log("\n-- Players tab import, as an iPad hands files over");

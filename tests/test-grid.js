@@ -49,10 +49,10 @@ ok("view switch present", A.$$(".viewsw .chip").length === 3);  // Tap grid, Til
 
 // ---------- layout ----------
 const heads = A.$$(".tapgrid thead th").map(t => t.textContent);
-ok("grid columns follow the catalog", heads.join("|") === "Player|PTS|2P|3P|1P|OREB|DREB|AST|STL|BLK|PF|TO", heads.join("|"));
+ok("grid columns follow the catalog", heads.join("|") === "Player|PTS|2P|3P|1P|FTX|OREB|DREB|AST|STL|BLK|PF|TO", heads.join("|"));
 ok("one row per player on this bench", A.$$(".tapgrid tbody tr").length === 2);
 ok("descriptor shown under name", A.$(".tapgrid .nmcell small").textContent === "tall");
-ok("every stat is a tappable cell", A.$$(".tapgrid .cell").length === 20)   // 2 players x 10 stats (v4.7.1);
+ok("every stat is a tappable cell", A.$$(".tapgrid .cell").length === 22)   // 2 players x 11 stats (FTX added in v4.12);
 ok("empty cells start at zero", A.$$(".tapgrid .cell").every(c => c.textContent === "0"));
 
 // ---------- one tap records ----------
@@ -128,7 +128,7 @@ ok("grid events read by box score", (() => {
   return B.$$("table")[0].querySelector("tbody tr").textContent.indexOf("Player 1") > -1;
 })());
 const csv = B.w.eval("sessionCSV(activeSession())");
-ok("grid events export to CSV", /Player 1,3,1,0,1,0,1,1/.test(csv), csv.split("\n").slice(4, 7).join(" | "));
+ok("grid events export to CSV", /Player 1,3,1,0,1,0,0,1,1/.test(csv), csv.split("\n").slice(4, 7).join(" | "));
 
 // ---------- switched-off stat disappears from the grid ----------
 B.w.eval("statByKey('BLK').on = false; UI.tab='session'; render();");

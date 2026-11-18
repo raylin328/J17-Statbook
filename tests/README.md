@@ -1,6 +1,6 @@
 # Stat Book tests
 
-665 checks in 14 files. Needs Node 22 or later (jsdom 30). Each file loads the app in a simulated browser (jsdom)
+1106 checks in 19 files. Needs Node 22 or later (jsdom 30). Each file loads the app in a simulated browser (jsdom)
 and drives it through its own functions and buttons.
 
 ## Run
@@ -29,7 +29,12 @@ node test-v46.js                           # one file
 | test-v47.js | 75 | drill catalog, group and multi-stage attempts, caps, drills and attempts CSV |
 | test-v471.js | 49 | possessions and points per possession, O/D rebound split, one-time upgrade |
 | test-v48.js | 63 | drills import (the real drills.csv), time/count/makes/rating, notes, one-pass entry, export round trip |
-| test-v49.js | 45 | lineups of any size, minutes across periods, plus/minus, version on screen, Clear all players, team-heading imports (replaces test-v45) |
+| test-v49.js | 56 | lineups of any size, minutes across periods and pauses, plus/minus, version on screen, Clear all players, team-heading imports (replaces test-v45) |
+| test-v410.js | 71 | opponent teams and players across games, new player wearing, merge, Team rows, add-player panel, quick edit |
+| test-v411.js | 50 | drill catalog of 200 with 60 on, on/off switches, areas and collapsible sections, 102-skill import, area column round trip, CSV-only picker |
+| test-v412.js | 89 | free throw misses and the one-time upgrade, on-court players first, bench header, sticky header hooks, turnover and block spots, assist pairing, assist_for in the events CSV |
+| test-v4122.js | 65 | full court: the two coordinate frames and the mapping between them, the Full court switch in all three places, tap-to-spot on the lying-down court, chart views on full and half court, the court column in the events CSV |
+| test-v413.js | 155 | shot zones: which spot is which zone, the angle bands, distance and angle, left/right mirroring, the tally, the Zones tab (map, table, angles, dots, tap-to-name), games and filters, the zone in the toast and the log, the shots CSV, the link from the box score, the sticky-header rule |
 | sample-data-test.js | 12 | a season in miniature, end to end |
 
 `fixtures/` holds a fictional 20-player roster and three older builds (v4, v4.1,
@@ -40,8 +45,21 @@ folder on the site shares one browser storage, so this matters.
 
 All names in these files are fictional. Keep real rosters out of this folder.
 
-## Known gap
+## Browser checks
 
-`minutesPlayed()` from v4.5 is not tested because its numbers are wrong: it
-treats periods as minutes and assumes a 5-minute game. Nothing in the app calls
-it yet; it will be rebuilt with the substitution screen.
+`browser-check.js` is separate from `npm test`. jsdom has no layout, so the files above can't tell where
+anything lands on a screen. This one opens the app in real Chromium at phone, iPad portrait and iPad
+landscape sizes (27 checks):
+
+- the game grid's header row sits at the top of the grid and never covers a row of cells;
+- the header sticks under the scoreboard when the grid fits the screen, and scrolls away when it doesn't;
+- the zone map's drawn shapes agree with `zoneAt()` at 37,600 points (a handful right on a boundary may
+  differ, because outlines are drawn to a tenth of a unit);
+- the Zones tab is no wider than the screen.
+
+```bash
+node browser-check.js        # needs Playwright with Chromium; it skips itself if Playwright is missing
+```
+
+It was added after v4.12 and v4.12.2 shipped a grid header that covered the third row of cells on a phone.
+The jsdom suite passed both times, because it can't see that. Run this whenever a change touches layout.
