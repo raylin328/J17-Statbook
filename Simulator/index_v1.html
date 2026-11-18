@@ -1,0 +1,755 @@
+<title>J17 Simulator</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Space+Grotesk:wght@500;600&display=swap">
+<style>
+/* Layout: one column. The full court leads, the bench sits under it, then the table that names every spot.
+   Teams and players fold away under the table. The court is drawn in feet (10 units to the foot). */
+:root {
+  --bg: #F6F7F6; --surface: #FFFFFF; --ink: #15191C; --ink-2: #59636B; --line: #DCE1E3;
+  --court: #E8EEEF; --court-line: #3C4850; --paint: #DCE5E7;
+  --home: #17505C; --home-soft: #E1ECEE; --away: #8A2F3F; --away-soft: #F4E4E7;
+  --focus: #1F7A8C; --warn: #9A5B00;
+  --f-display: "Space Grotesk", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --f-body: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #111517; --surface: #192024; --ink: #E7ECEE; --ink-2: #9AA6AD; --line: #2B353A;
+  --court: #1D272C; --court-line: #9FB0B8; --paint: #243238;
+  --home: #4FA3B3; --home-soft: #18343A; --away: #D9727F; --away-soft: #3A2026;
+  --focus: #6CC3D3; --warn: #E0A64A; color-scheme: dark; } }
+:root[data-theme="dark"] {
+  --bg: #111517; --surface: #192024; --ink: #E7ECEE; --ink-2: #9AA6AD; --line: #2B353A;
+  --court: #1D272C; --court-line: #9FB0B8; --paint: #243238;
+  --home: #4FA3B3; --home-soft: #18343A; --away: #D9727F; --away-soft: #3A2026;
+  --focus: #6CC3D3; --warn: #E0A64A; color-scheme: dark; }
+
+body { background: var(--bg); color: var(--ink); font-family: var(--f-body); font-size: 15px; line-height: 1.45;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 20px 40px; }
+.wrap { max-width: 1180px; margin: 0 auto; display: grid; gap: 18px; }
+header { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 8px 20px; }
+h1 { font-family: var(--f-display); font-weight: 600; font-size: 26px; margin: 0; letter-spacing: -0.01em; }
+h1 small { font-family: var(--f-body); font-weight: 500; font-size: 13px; color: var(--ink-2); letter-spacing: 0.04em; text-transform: uppercase; margin-left: 10px; }
+h2 { font-family: var(--f-display); font-weight: 600; font-size: 18px; margin: 0; text-wrap: balance; }
+.sub { color: var(--ink-2); margin: 0; font-size: 14px; }
+.actions { display: flex; flex-wrap: wrap; gap: 8px; }
+button { font: inherit; font-size: 14px; font-weight: 500; color: var(--ink); background: var(--surface); border: 1px solid var(--line);
+  border-radius: 8px; min-height: 40px; padding: 0 14px; cursor: pointer; }
+button:hover { border-color: var(--ink-2); }
+button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+button.primary { background: var(--home); border-color: var(--home); color: #fff; }
+
+.courtbox { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 12px; display: grid; gap: 10px; }
+.hint { font-size: 14px; color: var(--ink-2); min-height: 34px; margin: 0; padding-block: 6px; box-sizing: border-box; }
+.hint strong { color: var(--ink); font-weight: 600; }
+svg.court { display: block; width: 100%; height: auto; touch-action: none; user-select: none; -webkit-user-select: none; }
+svg.court .floor { fill: var(--court); }
+svg.court .paint { fill: var(--paint); }
+svg.court .ln { fill: none; stroke: var(--court-line); stroke-width: 2; }
+svg.court .rim { fill: none; stroke: var(--court-line); stroke-width: 2; }
+svg.court .tok circle.body { stroke: var(--surface); stroke-width: 3; }
+svg.court .tok.A circle.body { fill: var(--home); } svg.court .tok.B circle.body { fill: var(--away); }
+svg.court .tok text.num { fill: #fff; font: 600 17px var(--f-body); text-anchor: middle; dominant-baseline: central; pointer-events: none; }
+svg.court .tok text.nm { fill: var(--ink); font: 500 13px var(--f-body); text-anchor: middle; pointer-events: none;
+  paint-order: stroke; stroke: var(--court); stroke-width: 4px; stroke-linejoin: round; }
+svg.court .tok { cursor: grab; }
+svg.court .tok .ring { fill: none; stroke: var(--focus); stroke-width: 3; opacity: 0; }
+svg.court .tok.sel .ring { opacity: 1; }
+svg.court .basketlbl { fill: var(--ink-2); font: 500 13px var(--f-body); text-anchor: middle; }
+
+.bench { display: grid; gap: 8px; }
+.bench .row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.bench .tag { font-size: 12px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink-2); min-width: 64px; }
+.chip { min-height: 36px; padding: 0 12px; border-radius: 18px; font-size: 14px; display: inline-flex; align-items: center; gap: 6px; }
+.chip.A { background: var(--home-soft); border-color: transparent; } .chip.B { background: var(--away-soft); border-color: transparent; }
+.chip[aria-pressed="true"] { outline: 2px solid var(--focus); outline-offset: 1px; }
+.chip b { font-variant-numeric: tabular-nums; }
+.empty { font-size: 14px; color: var(--ink-2); }
+
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 16px; display: grid; gap: 12px; min-width: 0; }
+.tw { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; font-size: 14px; }
+th { text-align: left; font-size: 12px; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; color: var(--ink-2);
+  padding: 6px 10px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+td { padding: 9px 10px; border-bottom: 1px solid var(--line); vertical-align: middle; }
+td.num { font-variant-numeric: tabular-nums; white-space: nowrap; }
+tbody tr { cursor: pointer; }
+tbody tr.sel td { background: color-mix(in srgb, var(--focus) 10%, transparent); }
+.dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 6px; vertical-align: 0; }
+.dot.A { background: var(--home); } .dot.B { background: var(--away); }
+.where { font-weight: 500; }
+.muted { color: var(--ink-2); }
+.pill { display: inline-block; font-size: 12px; font-weight: 600; padding: 2px 8px; border-radius: 10px; white-space: nowrap; }
+.pill.front { background: var(--home-soft); color: var(--ink); } .pill.back { background: var(--line); color: var(--ink); }
+
+details.card summary { cursor: pointer; font-family: var(--f-display); font-weight: 600; font-size: 18px; min-height: 32px; display: flex; align-items: center; }
+.teams { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px; }
+.team { display: grid; gap: 8px; min-width: 0; }
+.team .head { display: grid; grid-template-columns: 1fr auto; gap: 8px; align-items: end; }
+label.f { display: grid; gap: 4px; font-size: 12px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: var(--ink-2); }
+input, select { font: inherit; font-size: 15px; color: var(--ink); background: var(--bg); border: 1px solid var(--line); border-radius: 8px; min-height: 40px; padding: 0 10px; min-width: 0; }
+.prow { display: grid; grid-template-columns: 64px 1fr; gap: 8px; }
+.prow input.n { text-align: center; font-variant-numeric: tabular-nums; }
+.warn { color: var(--warn); font-size: 13px; margin: 0; }
+.note { font-size: 13px; color: var(--ink-2); margin: 0; }
+@media (prefers-reduced-motion: no-preference) { svg.court .tok { transition: none; } }
+</style>
+
+<style>
+/* v1: movement. Modes, the step strip, and paths. */
+.toolbar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; }
+.seg { display: inline-flex; border: 1px solid var(--line); border-radius: 10px; padding: 3px; gap: 3px; background: var(--bg); }
+.seg button { border: 0; min-height: 36px; border-radius: 8px; background: transparent; }
+.seg button[aria-pressed="true"] { background: var(--surface); box-shadow: 0 0 0 1px var(--line); font-weight: 600; }
+.seg button:disabled { color: var(--ink-2); cursor: not-allowed; }
+.steps { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.steps .lbl { font-size: 12px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink-2); margin-right: 4px; }
+.steps button.st { min-width: 40px; min-height: 36px; padding: 0 10px; font-variant-numeric: tabular-nums; }
+.steps button.st[aria-pressed="true"] { background: var(--ink); color: var(--surface); border-color: var(--ink); }
+.steps button.st.draft { border-style: dashed; }
+.recbar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.recbar .count { font-size: 14px; color: var(--ink-2); margin-right: 4px; }
+button:disabled { opacity: 0.5; cursor: not-allowed; }
+button.danger { color: var(--away); }
+.toggles { display: flex; flex-wrap: wrap; gap: 14px; font-size: 14px; color: var(--ink-2); align-items: center; }
+.toggles label { display: inline-flex; align-items: center; gap: 6px; min-height: 36px; cursor: pointer; }
+.toggles input { min-height: 0; width: 18px; height: 18px; }
+.toggles select { min-height: 36px; }
+svg.court .pth { fill: none; stroke-linecap: round; stroke-linejoin: round; }
+svg.court .pth.halo { stroke: var(--court); stroke-width: 8; }
+svg.court .pth.A { stroke: var(--home); } svg.court .pth.B { stroke: var(--away); }
+svg.court .pth.line { stroke-width: 3.5; }
+svg.court .pth.draft { stroke-dasharray: 7 6; }
+svg.court g.old { opacity: 0.28; }
+svg.court g.dim { opacity: 0.14; }
+svg.court g.hi .pth.line { stroke-width: 5; }
+svg.court .ghost { fill: none; stroke-width: 2.5; stroke-dasharray: 5 4; }
+svg.court .ghost.A { stroke: var(--home); } svg.court .ghost.B { stroke: var(--away); }
+svg.court .ah.A { fill: var(--home); } svg.court .ah.B { fill: var(--away); }
+svg.court.locked .tok { cursor: default; }
+td.where { white-space: nowrap; }
+</style>
+
+<div class="wrap">
+  <header>
+    <h1>J17 Simulator <small>v1 &middot; Movement</small></h1>
+    <div class="actions">
+      <button id="btn-shape" type="button">Starting shape</button>
+      <button id="btn-clear" type="button">Clear the court</button>
+      <button id="btn-copy" type="button">Copy positions</button>
+    </div>
+  </header>
+
+  <section class="courtbox" aria-label="Court">
+    <div class="toolbar">
+      <div class="seg" role="group" aria-label="Mode">
+        <button id="mode-setup" type="button">Set up</button>
+        <button id="mode-rec" type="button">Record moves</button>
+      </div>
+      <div class="steps" id="steps"></div>
+    </div>
+    <p class="hint" id="hint"></p>
+    <div id="court"></div>
+    <div class="recbar" id="recbar"></div>
+    <div class="bench" id="bench"></div>
+    <div class="toggles" id="toggles">
+      <label for="opt-all"><input type="checkbox" id="opt-all"> Show earlier steps faintly</label>
+      <label for="opt-speed">Speed <select id="opt-speed"><option value="0.5">0.5x</option><option value="1">1x</option><option value="2">2x</option></select></label>
+    </div>
+  </section>
+
+  <section class="card">
+    <div>
+      <h2>Where each player is</h2>
+      <p class="sub" id="where-sub"></p>
+    </div>
+    <div class="tw"><table id="where"></table></div>
+    <p class="note">Zones are named the way the Stat Book names them, using the nearer basket. Left and right in a zone name are as you face that basket. Distances are from the centre of the rim, on an NBA-size court (94 by 50 ft). "Moved" is the length of the path drawn, in feet.</p>
+  </section>
+
+  <details class="card" id="teams-card">
+    <summary>Teams and players</summary>
+    <div class="teams" id="teams"></div>
+  </details>
+</div>
+
+<script>
+"use strict";
+/* ---------- shot zones, the same code as the Stat Book (v4.13) ---------- */
+var ZG = { w:500, h:470, bx:250, by:52.5, r3:237.5, corner:220, brk:140, lane:80, ft:190, ftr:60, ra:40 };
+ZG.cy3 = ZG.brk - Math.sqrt(ZG.r3 * ZG.r3 - ZG.corner * ZG.corner);   // centre of the three-point arc as drawn
+var Z_TOP = 11, Z_SLOT = 38;                                            // degrees from straight on
+var Z_BASE = Math.atan2(ZG.corner, ZG.brk - ZG.by) * 180 / Math.PI;    // 68.3: the line through the break of the three-point line
+var Z_MIN_SHADE = 3;                                                    // shots a zone needs before it is shaded
+
+var ZONE_RANGES = [["rim","At the rim"],["paint","Paint"],["nail","Nail (free-throw line)"],["mid","Midrange"],["three","Threes"]];
+var ZONE_BANDS = {
+  c: { angle:"baseline", mid:"short corner",  three:"corner three", midShort:"Short corner", threeShort:"Corner 3" },
+  w: { angle:"wing",     mid:"wing midrange", three:"wing three",   midShort:"Wing",         threeShort:"Wing 3" },
+  s: { angle:"slot",     mid:"elbow",         three:"slot three",   midShort:"Elbow",        threeShort:"Slot 3" }
+};
+var ZONE_SECTORS = (function(){
+  var b = Math.round(Z_BASE), deg = { c: b + "°+", w: Z_SLOT + "–" + b + "°", s: Z_TOP + "–" + Z_SLOT + "°" };
+  var out = [];
+  ["c","w","s"].forEach(function(k){
+    out.push({ id:"l" + k, side:"l", band:k, name:"Left " + ZONE_BANDS[k].angle, short: cap(ZONE_BANDS[k].angle), deg:deg[k] }); });
+  out.push({ id:"t", side:"m", band:"t", name:"Middle", short:"Middle", deg:"0–" + Z_TOP + "°" });
+  ["s","w","c"].forEach(function(k){
+    out.push({ id:"r" + k, side:"r", band:k, name:"Right " + ZONE_BANDS[k].angle, short: cap(ZONE_BANDS[k].angle), deg:deg[k] }); });
+  function cap(s){ return s.charAt(0).toUpperCase() + s.slice(1); }
+  return out;   // left baseline round to right baseline, the way they sit on the court
+})();
+var ZONES = (function(){
+  var out = [
+    { id:"rim",   range:"rim",   name:"At the rim", short:"Rim" },
+    { id:"paint", range:"paint", name:"Paint", short:"Paint" },
+    { id:"nail",  range:"nail",  name:"Nail (free-throw line)", short:"Nail" }
+  ];
+  ["mid","three"].forEach(function(range){
+    ZONE_SECTORS.forEach(function(sec){
+      var b = ZONE_BANDS[sec.band];
+      out.push({ id: range + "-" + sec.id, range: range, sector: sec.id,
+        name: sec.band === "t" ? (range === "mid" ? "Top of the key midrange" : "Top of the key three")
+                               : (sec.side === "l" ? "Left " : "Right ") + b[range],
+        short: sec.band === "t" ? (range === "mid" ? "Top" : "Top 3") : b[range + "Short"] });
+    });
+  });
+  return out;
+})();
+function zoneById(id){ for(var i = 0; i < ZONES.length; i++){ if(ZONES[i].id === id) return ZONES[i]; } return null; }
+function sectorById(id){ for(var i = 0; i < ZONE_SECTORS.length; i++){ if(ZONE_SECTORS[i].id === id) return ZONE_SECTORS[i]; } return null; }
+function rangeName(id){ for(var i = 0; i < ZONE_RANGES.length; i++){ if(ZONE_RANGES[i][0] === id) return ZONE_RANGES[i][1]; } return id; }
+
+// where a spot is, measured from the basket
+function spotGeo(x, y){
+  var dx = x * ZG.w - ZG.bx, dy = y * ZG.h - ZG.by, d = Math.sqrt(dx * dx + dy * dy);
+  var deg = Math.atan2(Math.abs(dx), dy) * 180 / Math.PI;
+  var band = deg < Z_TOP ? "t" : deg < Z_SLOT ? "s" : deg < Z_BASE ? "w" : "c";
+  var side = band === "t" ? "m" : dx < 0 ? "l" : "r";
+  return { dx:dx, dy:dy, d:d, ft: Math.round(d) / 10, deg:deg, band:band, side:side, lr: dx < 0 ? "left" : "right",
+           sector: band === "t" ? "t" : side + band };
+}
+// outside the three-point line as drawn: the straight part in the corners, the arc above them
+function beyondArc(x, y){
+  var px = x * ZG.w, py = y * ZG.h, dx = Math.abs(px - ZG.bx);
+  if(py <= ZG.brk) return dx >= ZG.corner;
+  return Math.sqrt(dx * dx + (py - ZG.cy3) * (py - ZG.cy3)) >= ZG.r3;
+}
+// three: true or false when the stat says so; leave it out to go by the drawn line
+function zoneAt(x, y, three){
+  var g = spotGeo(x, y), px = x * ZG.w, py = y * ZG.h, id;
+  if(three === undefined || three === null) three = beyondArc(x, y);
+  var nx = px - ZG.bx, ny = py - ZG.ft;
+  if(three) id = "three-" + g.sector;
+  else if(g.d <= ZG.ra || (Math.abs(g.dx) <= ZG.ra && py <= ZG.by)) id = "rim";
+  else if(Math.sqrt(nx * nx + ny * ny) <= ZG.ftr) id = "nail";
+  else if(Math.abs(g.dx) <= ZG.lane && py <= ZG.ft) id = "paint";
+  else id = "mid-" + g.sector;
+  return { id:id, zone: zoneById(id), sector: g.sector, band: g.band, side: g.side, lr: g.lr, ft: g.ft, deg: g.deg };
+}
+
+
+/* ---------- state ----------
+   v0 saved the starting positions as each player's x and y. v1 keeps them there (the baseline, "Start")
+   and adds steps: each step holds, for every player who moved, the path their drag took, in feet.
+   Where a player is after step k = the end of their last path up to k. v0 can still open this data. */
+var KEY = "j17.simulator.court.v1";
+var COURT = { L: 94, W: 50, half: 47 };
+var APP_VERSION = "1.0";
+function uid(){ return "p" + Math.random().toString(36).slice(2, 10) + Date.now().toString(36).slice(-4); }
+function exampleState(){
+  var s = { v: 1, attacksA: "right", teams: { A: "Home", B: "Away" }, players: [], steps: [] };
+  ["A", "B"].forEach(function(t){
+    for(var i = 0; i < 5; i++) s.players.push({ id: uid(), team: t, num: String(t === "A" ? [1, 3, 5, 11, 23][i] : [2, 4, 10, 14, 32][i]), name: "", x: null, y: null });
+  });
+  startingShape(s);
+  return s;
+}
+function load(){
+  try {
+    var raw = localStorage.getItem(KEY);
+    if(raw){ var s = JSON.parse(raw); if(s && s.v === 1 && Array.isArray(s.players)){ if(!Array.isArray(s.steps)) s.steps = []; return s; } }
+  } catch(e) {}
+  return exampleState();
+}
+function save(){ try { localStorage.setItem(KEY, JSON.stringify(S)); } catch(e) {} }
+var S = load();
+var UI = { sel: null, mode: S.steps.length ? "rec" : "setup", view: S.steps.length, pending: {}, showAll: true, speed: 1,
+           playing: null, armed: null };
+try { var pref = JSON.parse(localStorage.getItem(KEY + ".prefs") || "{}"); if(pref.showAll === false) UI.showAll = false; if(pref.speed) UI.speed = pref.speed; } catch(e) {}
+function savePrefs(){ try { localStorage.setItem(KEY + ".prefs", JSON.stringify({ showAll: UI.showAll, speed: UI.speed })); } catch(e) {} }
+
+/* ---------- positions and paths ---------- */
+function byId(id){ for(var i = 0; i < S.players.length; i++){ if(S.players[i].id === id) return S.players[i]; } return null; }
+function onCourt(){ return S.players.filter(function(p){ return p.x !== null; }); }
+// where everyone stands after step k (0 = Start); pending moves are added on top at the latest step
+function posAt(k, withPending){
+  var out = {};
+  onCourt().forEach(function(p){ out[p.id] = { x: p.x, y: p.y }; });
+  for(var i = 0; i < k && i < S.steps.length; i++){
+    var mv = S.steps[i].moves;
+    Object.keys(mv).forEach(function(id){ var pts = mv[id]; if(out[id]) out[id] = { x: pts[pts.length - 1][0], y: pts[pts.length - 1][1] }; });
+  }
+  if(withPending) Object.keys(UI.pending).forEach(function(id){ var pts = UI.pending[id]; if(out[id] && pts.length) out[id] = { x: pts[pts.length - 1][0], y: pts[pts.length - 1][1] }; });
+  return out;
+}
+function editable(){ return !UI.playing && UI.view === S.steps.length; }
+function pendingCount(){ return Object.keys(UI.pending).length; }
+function pathLen(pts){ var d = 0; for(var i = 1; i < pts.length; i++) d += Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]); return d; }
+// Ramer-Douglas-Peucker: keeps the shape of the drag and drops the jitter of a finger (tolerance in feet)
+function simplify(pts, tol){
+  if(pts.length < 3) return pts.slice();
+  var a = pts[0], b = pts[pts.length - 1], dx = b[0] - a[0], dy = b[1] - a[1], L = Math.hypot(dx, dy), far = -1, at = 0;
+  for(var i = 1; i < pts.length - 1; i++){
+    var d = L ? Math.abs(dy * pts[i][0] - dx * pts[i][1] + b[0] * a[1] - b[1] * a[0]) / L : Math.hypot(pts[i][0] - a[0], pts[i][1] - a[1]);
+    if(d > far){ far = d; at = i; }
+  }
+  if(far <= tol) return [a, b];
+  return simplify(pts.slice(0, at + 1), tol).slice(0, -1).concat(simplify(pts.slice(at), tol));
+}
+function r1(n){ return Math.round(n * 10) / 10; }
+// a point a given distance along a path
+function pointAlong(pts, dist){
+  if(pts.length === 1) return pts[0];
+  for(var i = 1; i < pts.length; i++){
+    var seg = Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]);
+    if(dist <= seg || i === pts.length - 1){ var u = seg ? Math.min(1, dist / seg) : 1;
+      return [pts[i - 1][0] + (pts[i][0] - pts[i - 1][0]) * u, pts[i - 1][1] + (pts[i][1] - pts[i - 1][1]) * u]; }
+    dist -= seg;
+  }
+  return pts[pts.length - 1];
+}
+// the path minus its last few feet, so the arrowhead stops at the edge of the player's circle
+function trimEnd(pts, cut){
+  var L = pathLen(pts); if(L <= cut + 0.2) return null;
+  var keep = L - cut, out = [pts[0]], run = 0;
+  for(var i = 1; i < pts.length; i++){
+    var seg = Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]);
+    if(run + seg >= keep){ out.push(pointAlong([pts[i - 1], pts[i]], keep - run)); return out; }
+    out.push(pts[i]); run += seg;
+  }
+  return out;
+}
+// a smooth curve through the points (Catmull-Rom, drawn as Bezier curves), in court units (10 to the foot)
+function curve(pts){
+  var P = pts.map(function(p){ return [p[0] * 10, p[1] * 10]; });
+  var d = "M" + P[0][0].toFixed(1) + " " + P[0][1].toFixed(1);
+  if(P.length === 2) return d + "L" + P[1][0].toFixed(1) + " " + P[1][1].toFixed(1);
+  for(var i = 0; i < P.length - 1; i++){
+    var p0 = P[i - 1] || P[i], p1 = P[i], p2 = P[i + 1], p3 = P[i + 2] || p2;
+    var c1 = [p1[0] + (p2[0] - p0[0]) / 6, p1[1] + (p2[1] - p0[1]) / 6], c2 = [p2[0] - (p3[0] - p1[0]) / 6, p2[1] - (p3[1] - p1[1]) / 6];
+    d += "C" + c1[0].toFixed(1) + " " + c1[1].toFixed(1) + " " + c2[0].toFixed(1) + " " + c2[1].toFixed(1) + " " + p2[0].toFixed(1) + " " + p2[1].toFixed(1);
+  }
+  return d;
+}
+
+/* ---------- geometry for naming spots ---------- */
+function attacks(team){ return team === "A" ? S.attacksA : (S.attacksA === "right" ? "left" : "right"); }
+function whereAt(team, x, y){
+  var right = x >= COURT.half;
+  var hx = right ? y : COURT.W - y, hy = right ? COURT.L - x : x;
+  var z = zoneAt(hx / 50, hy / 47);
+  return { basket: right ? "right" : "left", zone: z.zone.name, ft: z.ft, deg: z.deg, lr: z.lr, front: attacks(team) === (right ? "right" : "left") };
+}
+function angleText(w){ return Math.round(w.deg) === 0 ? "straight on" : Math.round(w.deg) + "° " + w.lr; }
+function fmtFt(n){ return (Math.round(n * 10) / 10).toFixed(1); }
+function label(p){ return "#" + (p.num || "?") + (p.name ? " " + p.name : ""); }
+function teamName(t){ return S.teams[t] || (t === "A" ? "Team A" : "Team B"); }
+function stepName(k){ return k === 0 ? "Start" : "Step " + k; }
+function startingShape(s){
+  var spots = [[25, 31], [44, 21], [6, 21], [47.5, 4], [2.5, 4]];   // top, both wings, both corners: all beyond the arc
+  var toFull = function(hx, hy){ return s.attacksA === "right" ? { x: COURT.L - hy, y: hx } : { x: hy, y: COURT.W - hx }; };
+  var a = s.players.filter(function(p){ return p.team === "A"; }), b = s.players.filter(function(p){ return p.team === "B"; });
+  spots.forEach(function(sp, i){
+    if(a[i]){ var f = toFull(sp[0], sp[1]); a[i].x = f.x; a[i].y = f.y; }
+    if(b[i]){ var dx = 25 - sp[0], dy = 5.25 - sp[1], d = Math.sqrt(dx * dx + dy * dy), k = Math.min(5, d) / d;   // 5 ft toward the rim
+              var g = toFull(sp[0] + dx * k, sp[1] + dy * k); b[i].x = r1(g.x); b[i].y = r1(g.y); }
+  });
+}
+
+/* ---------- court drawing ---------- */
+var NS = "http://www.w3.org/2000/svg";
+function courtEnd(flip){
+  return '<g' + (flip ? ' transform="translate(940 0) scale(-1 1)"' : '') + '>' +
+    '<rect class="paint" x="0" y="170" width="190" height="160"/>' +
+    '<rect class="ln" x="0" y="170" width="190" height="160"/>' +
+    '<circle class="ln" cx="190" cy="250" r="60"/>' +
+    '<line class="ln" x1="40" y1="220" x2="40" y2="280"/>' +
+    '<circle class="rim" cx="52.5" cy="250" r="7.5"/>' +
+    '<path class="ln" d="M52.5 210 A40 40 0 0 1 52.5 290"/>' +
+    '<path class="ln" d="M0 30 L140 30 A237.5 237.5 0 0 1 140 470 L0 470"/>' +
+    '</g>';
+}
+function drawCourt(){
+  var box = document.getElementById("court");
+  box.innerHTML = '<svg class="court" id="svg" viewBox="-20 -20 980 560" role="img" aria-label="Full court with the players and their paths">' +
+    '<defs>' +
+    '<marker id="ah-A" viewBox="0 0 10 10" refX="7" refY="5" markerWidth="5" markerHeight="5" orient="auto"><path class="ah A" d="M0 0L10 5L0 10z"/></marker>' +
+    '<marker id="ah-B" viewBox="0 0 10 10" refX="7" refY="5" markerWidth="5" markerHeight="5" orient="auto"><path class="ah B" d="M0 0L10 5L0 10z"/></marker>' +
+    '</defs>' +
+    '<rect class="floor" x="0" y="0" width="940" height="500"/>' + courtEnd(false) + courtEnd(true) +
+    '<rect class="ln" x="0" y="0" width="940" height="500"/>' +
+    '<line class="ln" x1="470" y1="0" x2="470" y2="500"/>' +
+    '<circle class="ln" cx="470" cy="250" r="60"/>' +
+    '<text class="basketlbl" x="120" y="528">Left basket</text>' +
+    '<text class="basketlbl" x="820" y="528">Right basket</text>' +
+    '<g id="paths"></g><g id="ghosts"></g><g id="toks"></g></svg>';
+  document.getElementById("svg").addEventListener("pointerdown", onDown);
+}
+function pathGroup(id, pts, cls, arrow){
+  var p = byId(id); if(!p || pts.length < 2) return "";
+  var hi = UI.sel === id ? " hi" : (UI.sel && !UI.playing ? " dim" : "");
+  var line = arrow ? trimEnd(pts, 2.3) : pts;
+  if(!line) return "";
+  var d = curve(line);
+  return '<g class="' + cls + hi + '" data-pid="' + id + '"><path class="pth halo" d="' + d + '"/>' +
+    '<path class="pth line ' + p.team + (cls.indexOf("draft") > -1 ? " draft" : "") + '" d="' + d + '"' +
+    (arrow ? ' marker-end="url(#ah-' + p.team + ')"' : '') + '/></g>';
+}
+function drawPaths(pos){
+  var g = document.getElementById("paths"), gh = document.getElementById("ghosts"); if(!g) return;
+  var h = "", k = UI.view;
+  if(UI.playing){ g.innerHTML = ""; gh.innerHTML = ""; return; }
+  if(UI.showAll) for(var i = 0; i < k - 1; i++){ var mv = S.steps[i].moves; Object.keys(mv).forEach(function(id){ h += pathGroup(id, mv[id], "old", true); }); }
+  if(k >= 1){ var cur = S.steps[k - 1].moves; Object.keys(cur).forEach(function(id){ h += pathGroup(id, cur[id], "now", true); }); }
+  var ghosts = "";
+  if(editable()){
+    var start = posAt(S.steps.length, false);
+    Object.keys(UI.pending).forEach(function(id){
+      var p = byId(id), pts = UI.pending[id]; if(!p) return;
+      h += pathGroup(id, pts, "draft", true);
+      ghosts += '<circle class="ghost ' + p.team + '" cx="' + start[id].x * 10 + '" cy="' + start[id].y * 10 + '" r="19"/>';
+    });
+  }
+  g.innerHTML = h; gh.innerHTML = ghosts;
+}
+function drawTokens(pos){
+  var g = document.getElementById("toks"); if(!g) return;
+  g.innerHTML = "";
+  onCourt().forEach(function(p){
+    var at = pos[p.id]; if(!at) return;
+    var t = document.createElementNS(NS, "g");
+    t.setAttribute("class", "tok " + p.team + (UI.sel === p.id ? " sel" : ""));
+    t.setAttribute("data-pid", p.id);
+    t.setAttribute("transform", "translate(" + (at.x * 10) + " " + (at.y * 10) + ")");
+    t.innerHTML = '<circle class="ring" r="24"/><circle class="body" r="19"/><text class="num">' + esc(p.num || "?") + '</text>' +
+      (p.name ? '<text class="nm" y="38">' + esc(p.name) + '</text>' : '');
+    g.appendChild(t);
+  });
+  document.getElementById("svg").classList.toggle("locked", !editable() && UI.mode === "rec");
+}
+function esc(s){ return String(s).replace(/[&<>"']/g, function(c){ return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]; }); }
+
+/* ---------- dragging: in Set up it moves the start position; in Record it draws a path ---------- */
+var drag = null;
+function feetAt(ev){
+  var svg = document.getElementById("svg"), pt = svg.createSVGPoint();
+  pt.x = ev.clientX; pt.y = ev.clientY;
+  var m = svg.getScreenCTM(); if(!m) return null;
+  var q = pt.matrixTransform(m.inverse());
+  return { x: Math.min(COURT.L, Math.max(0, q.x / 10)), y: Math.min(COURT.W, Math.max(0, q.y / 10)) };
+}
+function onDown(ev){
+  if(UI.playing) return;
+  var tok = ev.target.closest ? ev.target.closest(".tok") : null;
+  if(tok){
+    var p = byId(tok.getAttribute("data-pid"));
+    var can = UI.mode === "setup" || editable();
+    var at = UI.mode === "rec" ? posAt(S.steps.length, true)[p.id] : { x: p.x, y: p.y };
+    drag = { p: p, el: tok, sx: ev.clientX, sy: ev.clientY, moved: false, can: can, pts: [[at.x, at.y]] };
+    try { ev.currentTarget.setPointerCapture(ev.pointerId); } catch(e) {}
+    ev.preventDefault();
+    return;
+  }
+  var sel = UI.sel ? byId(UI.sel) : null, f = feetAt(ev);
+  if(!sel || !f) return;
+  if(UI.mode === "setup"){ if(S.steps.length) return; sel.x = r1(f.x); sel.y = r1(f.y); save(); renderAll(); return; }
+  if(!editable() || sel.x === null) return;
+  var from = posAt(S.steps.length, true)[sel.id];   // tap an empty spot while recording: a straight move there
+  addPending(sel.id, [[from.x, from.y], [r1(f.x), r1(f.y)]]);
+  renderAll();
+}
+function addPending(id, pts){
+  var cur = UI.pending[id];
+  UI.pending[id] = cur ? cur.concat(pts.slice(1)) : pts;
+}
+document.addEventListener("pointermove", function(ev){
+  if(!drag || !drag.can) return;
+  if(Math.abs(ev.clientX - drag.sx) + Math.abs(ev.clientY - drag.sy) > 4) drag.moved = true;
+  if(!drag.moved) return;
+  var f = feetAt(ev); if(!f) return;
+  var last = drag.pts[drag.pts.length - 1];
+  if(Math.hypot(f.x - last[0], f.y - last[1]) >= 0.25) drag.pts.push([f.x, f.y]);
+  drag.el.setAttribute("transform", "translate(" + (f.x * 10) + " " + (f.y * 10) + ")");
+  if(UI.mode === "rec"){   // draw the path as it is being made
+    var cur = UI.pending[drag.p.id], live = cur ? cur.concat(drag.pts.slice(1)) : drag.pts;
+    var g = document.getElementById("paths"), old = g.querySelector('g.draft[data-pid="' + drag.p.id + '"]');
+    if(old) old.remove();
+    g.insertAdjacentHTML("beforeend", pathGroup(drag.p.id, live, "draft", false));
+  } else { drag.p.x = r1(f.x); drag.p.y = r1(f.y); }
+  renderTable();
+});
+document.addEventListener("pointerup", function(){
+  if(!drag) return;
+  var d = drag; drag = null;
+  if(d.moved && d.can){
+    if(UI.mode === "rec"){
+      var pts = d.pts.map(function(q){ return [r1(q[0]), r1(q[1])]; });
+      addPending(d.p.id, pts);
+    }
+    UI.sel = d.p.id; save();
+  } else UI.sel = UI.sel === d.p.id ? null : d.p.id;
+  renderAll();
+});
+document.addEventListener("pointercancel", function(){ if(drag){ drag = null; renderAll(); } });
+
+/* ---------- steps ---------- */
+function confirmStep(){
+  if(!pendingCount()) return;
+  var moves = {};
+  Object.keys(UI.pending).forEach(function(id){
+    var s = simplify(UI.pending[id], 0.25).map(function(q){ return [r1(q[0]), r1(q[1])]; });
+    if(pathLen(s) >= 0.3) moves[id] = s;
+  });
+  UI.pending = {};
+  if(Object.keys(moves).length){ S.steps.push({ id: uid(), moves: moves }); save(); }
+  UI.view = S.steps.length; UI.sel = null; renderAll();
+}
+function discard(){ UI.pending = {}; UI.sel = null; renderAll(); }
+function undoStep(){
+  if(!S.steps.length) return;
+  S.steps.pop(); UI.pending = {}; UI.view = S.steps.length; UI.armed = null; save(); renderAll();
+}
+// a two-tap guard for anything that throws work away (the viewer has no confirm dialog)
+function armed(key, b, text, act){
+  if(UI.armed === key){ UI.armed = null; act(); return; }
+  UI.armed = key; b.textContent = text;
+  setTimeout(function(){ if(UI.armed === key){ UI.armed = null; renderAll(); } }, 3000);
+}
+
+/* ---------- playback: everyone moves along their path at once, step by step ---------- */
+function play(){
+  if(!S.steps.length) return;
+  UI.pending = {}; UI.sel = null;
+  var dur = 1600 / UI.speed, from = UI.view >= S.steps.length ? 0 : UI.view, t0 = null;
+  UI.playing = { step: from };
+  renderAll();
+  function frame(ts){
+    if(!UI.playing) return;
+    if(t0 === null) t0 = ts;
+    var el = ts - t0, k = from + Math.floor(el / dur);
+    if(k >= S.steps.length){ UI.playing = null; UI.view = S.steps.length; renderAll(); return; }
+    var u = (el % dur) / dur, e = u < 0.5 ? 2 * u * u : 1 - Math.pow(-2 * u + 2, 2) / 2;   // ease in and out
+    var pos = posAt(k, false), mv = S.steps[k].moves;
+    Object.keys(mv).forEach(function(id){ if(pos[id]){ var q = pointAlong(mv[id], e * pathLen(mv[id])); pos[id] = { x: q[0], y: q[1] }; } });
+    if(UI.playing.step !== k){ UI.playing.step = k; UI.view = k; renderSteps(); }
+    drawTokens(pos);
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+}
+function stop(){ UI.playing = null; UI.view = S.steps.length; renderAll(); }
+
+/* ---------- panels ---------- */
+function renderModes(){
+  var su = document.getElementById("mode-setup"), rc = document.getElementById("mode-rec");
+  su.setAttribute("aria-pressed", UI.mode === "setup" ? "true" : "false");
+  rc.setAttribute("aria-pressed", UI.mode === "rec" ? "true" : "false");
+  su.disabled = !!S.steps.length || !!UI.playing;
+  su.title = S.steps.length ? "Undo every step to change the start positions" : "";
+  rc.disabled = !!UI.playing || !onCourt().length;
+}
+function renderSteps(){
+  var box = document.getElementById("steps"); box.innerHTML = "";
+  if(UI.mode !== "rec" && !S.steps.length) return;
+  var l = document.createElement("span"); l.className = "lbl"; l.textContent = "Steps"; box.appendChild(l);
+  for(var k = 0; k <= S.steps.length; k++){
+    (function(k){
+      var b = document.createElement("button"); b.type = "button"; b.className = "st";
+      b.textContent = k === 0 ? "Start" : String(k);
+      b.setAttribute("aria-pressed", UI.view === k ? "true" : "false");
+      b.setAttribute("aria-label", stepName(k));
+      b.disabled = !!UI.playing;
+      b.addEventListener("click", function(){ UI.view = k; UI.sel = null; renderAll(); });
+      box.appendChild(b);
+    })(k);
+  }
+  if(pendingCount() && UI.view === S.steps.length){
+    var d = document.createElement("button"); d.type = "button"; d.className = "st draft"; d.disabled = true;
+    d.textContent = String(S.steps.length + 1); d.title = "Step " + (S.steps.length + 1) + ", not confirmed yet"; box.appendChild(d);
+  }
+}
+function renderRecbar(){
+  var bar = document.getElementById("recbar"); bar.innerHTML = "";
+  if(UI.mode !== "rec") return;
+  var add = function(text, cls, fn, dis, id){ var b = document.createElement("button"); b.type = "button"; b.textContent = text;
+    if(cls) b.className = cls; if(id) b.id = id; b.disabled = !!dis; b.addEventListener("click", function(){ fn(b); }); bar.appendChild(b); return b; };
+  if(UI.playing){ add("Stop", "", stop, false, "btn-stop"); var c = document.createElement("span"); c.className = "count";
+    c.textContent = "Playing " + stepName(UI.playing.step + 1).toLowerCase() + " of " + S.steps.length; bar.appendChild(c); return; }
+  var n = pendingCount();
+  var cnt = document.createElement("span"); cnt.className = "count";
+  cnt.textContent = !editable() ? "Viewing " + stepName(UI.view).toLowerCase() + "." :
+    n ? n + (n === 1 ? " player" : " players") + " moved for step " + (S.steps.length + 1) + "." : "Drag players to record step " + (S.steps.length + 1) + ".";
+  bar.appendChild(cnt);
+  add("Confirm step " + (S.steps.length + 1), "primary", confirmStep, !n || !editable(), "btn-confirm");
+  add("Discard moves", "", discard, !n || !editable(), "btn-discard");
+  add("Play", "", play, !S.steps.length, "btn-play");
+  add("Undo last step", "danger", function(b){ armed("undo", b, "Tap again to undo step " + S.steps.length, undoStep); }, !S.steps.length || !!n, "btn-undo");
+}
+function renderBench(){
+  var b = document.getElementById("bench"); b.innerHTML = "";
+  var off = S.players.filter(function(p){ return p.x === null; });
+  if(UI.mode === "rec" && !off.length) return;
+  ["A", "B"].forEach(function(t){
+    var mine = off.filter(function(p){ return p.team === t; });
+    var row = document.createElement("div"); row.className = "row";
+    var tag = document.createElement("span"); tag.className = "tag"; tag.textContent = teamName(t); row.appendChild(tag);
+    if(!mine.length){ var e = document.createElement("span"); e.className = "empty"; e.textContent = "All five on the court"; row.appendChild(e); }
+    mine.forEach(function(p){
+      var c = document.createElement("button"); c.type = "button"; c.className = "chip " + t;
+      c.setAttribute("aria-pressed", UI.sel === p.id ? "true" : "false");
+      c.disabled = UI.mode === "rec";
+      c.innerHTML = "<b>#" + esc(p.num || "?") + "</b>" + (p.name ? " " + esc(p.name) : "");
+      c.addEventListener("click", function(){ UI.sel = UI.sel === p.id ? null : p.id; renderAll(); });
+      row.appendChild(c);
+    });
+    b.appendChild(row);
+  });
+}
+function renderHint(){
+  var h = document.getElementById("hint"), p = UI.sel ? byId(UI.sel) : null;
+  if(UI.playing){ h.textContent = "Playing the steps. Tap Stop to go back to editing."; return; }
+  if(UI.mode === "rec"){
+    if(!editable()) h.textContent = "Viewing " + stepName(UI.view).toLowerCase() + ": its paths are solid, earlier ones faint. Tap step " + S.steps.length + " to record more.";
+    else if(p) h.innerHTML = "<strong>" + esc(label(p)) + "</strong> selected, other paths faded. Drag it, or tap an empty spot to send it there in a straight line.";
+    else h.textContent = "Drag players along the path they take. Drag the same player again to add to the path. Confirm when everyone in this step has moved.";
+    return;
+  }
+  if(p && p.x === null) h.innerHTML = "Tap the court to place <strong>" + esc(label(p)) + "</strong> (" + esc(teamName(p.team)) + ").";
+  else if(p) h.innerHTML = "<strong>" + esc(label(p)) + "</strong> selected. Drag, or tap an empty spot to move. " +
+    '<button type="button" id="btn-bench" style="min-height:32px;margin-left:6px">Take off the court</button>';
+  else h.textContent = "Set the starting positions. Drag a player to move them; tap a player on the bench, then the court, to place them.";
+  var bb = document.getElementById("btn-bench");
+  if(bb) bb.addEventListener("click", function(){ p.x = null; p.y = null; UI.sel = null; save(); renderAll(); });
+}
+function moved(id, k){   // feet travelled in step k, and in total up to it (pending moves count at the latest step)
+  var step = 0, total = 0;
+  for(var i = 0; i < k && i < S.steps.length; i++){ var m = S.steps[i].moves[id]; if(m){ var L = pathLen(m); total += L; if(i === k - 1) step = L; } }
+  if(editable() && UI.mode === "rec" && UI.pending[id]){ var pl = pathLen(UI.pending[id]); step = pl; total += pl; }
+  return { step: step, total: total };
+}
+function renderTable(){
+  var t = document.getElementById("where"), k = UI.view, rec = UI.mode === "rec";
+  var pos = drag && drag.moved && UI.mode === "setup" ? posAt(0, false) : posAt(k, editable());
+  if(drag && drag.moved && UI.mode === "rec"){ var q = drag.pts[drag.pts.length - 1]; pos[drag.p.id] = { x: q[0], y: q[1] }; }
+  var on = onCourt().length, draft = editable() && pendingCount();
+  document.getElementById("where-sub").textContent = (rec ? (draft ? "Step " + (S.steps.length + 1) + " (not confirmed yet)" : stepName(k)) + ". " : "") +
+    on + " of " + S.players.length + " on the court. " + teamName("A") + " attack the " + attacks("A") + " basket, " + teamName("B") + " the " + attacks("B") + ".";
+  var h = "<thead><tr><th>Player</th><th>Team</th><th>Where</th><th>Basket</th><th>Distance</th><th>Angle</th><th>Half</th>" +
+    (rec ? "<th>Moved this step</th><th>Moved in total</th>" : "") + "<th>Spot (ft)</th></tr></thead><tbody>";
+  ["A", "B"].forEach(function(team){
+    S.players.filter(function(p){ return p.team === team; }).forEach(function(p){
+      var at = pos[p.id], w = at ? whereAt(team, at.x, at.y) : null;
+      h += '<tr data-pid="' + p.id + '"' + (UI.sel === p.id ? ' class="sel"' : '') + '><td><span class="dot ' + team + '"></span>' + esc(label(p)) + '</td>' +
+        '<td>' + esc(teamName(team)) + '</td>';
+      if(!w) h += '<td class="muted" colspan="' + (rec ? 9 : 7) + '">On the bench</td>';
+      else {
+        h += '<td class="where">' + esc(w.zone) + '</td><td>' + (w.basket === "right" ? "Right" : "Left") + '</td>' +
+          '<td class="num">' + fmtFt(w.ft) + ' ft</td><td class="num">' + angleText(w) + '</td>' +
+          '<td><span class="pill ' + (w.front ? 'front">Attacking half' : 'back">Defending half') + '</span></td>';
+        if(rec){ var m = moved(p.id, k); h += '<td class="num">' + (m.step ? fmtFt(m.step) + " ft" : '<span class="muted">-</span>') + '</td><td class="num">' + fmtFt(m.total) + ' ft</td>'; }
+        h += '<td class="num muted">' + fmtFt(at.x) + ', ' + fmtFt(at.y) + '</td>';
+      }
+      h += "</tr>";
+    });
+  });
+  t.innerHTML = h + "</tbody>";
+  Array.prototype.forEach.call(t.querySelectorAll("tbody tr"), function(r){
+    r.addEventListener("click", function(){ var id = r.getAttribute("data-pid"); UI.sel = UI.sel === id ? null : id; renderAll(); });
+  });
+}
+
+/* ---------- teams and players ---------- */
+function dupNums(team){
+  var seen = {}, dup = [];
+  S.players.filter(function(p){ return p.team === team; }).forEach(function(p){ var n = String(p.num).trim(); if(n && seen[n]) dup.push(n); seen[n] = true; });
+  return dup;
+}
+function renderTeams(){
+  var box = document.getElementById("teams"); box.innerHTML = "";
+  ["A", "B"].forEach(function(t){
+    var d = document.createElement("div"); d.className = "team";
+    var head = '<div class="head"><label class="f" for="tn-' + t + '">Team name<input id="tn-' + t + '" value="' + esc(teamName(t)) + '"></label>';
+    if(t === "A") head += '<label class="f" for="att">Attacks<select id="att"><option value="right">Right basket</option><option value="left">Left basket</option></select></label>';
+    else head += '<span class="note" style="padding-bottom:10px">Attacks the other basket</span>';
+    d.innerHTML = head + '</div><div class="prow"><span class="note">Jersey</span><span class="note">Name</span></div>';
+    S.players.filter(function(p){ return p.team === t; }).forEach(function(p){
+      var r = document.createElement("div"); r.className = "prow";
+      r.innerHTML = '<input class="n" id="num-' + p.id + '" inputmode="numeric" maxlength="3" aria-label="Jersey number" value="' + esc(p.num) + '">' +
+        '<input id="name-' + p.id + '" maxlength="30" aria-label="Name" placeholder="Name" value="' + esc(p.name) + '">';
+      r.querySelector(".n").addEventListener("input", function(ev){ p.num = ev.target.value.trim(); save(); renderAll(true); });
+      r.querySelectorAll("input")[1].addEventListener("input", function(ev){ p.name = ev.target.value; save(); renderAll(true); });
+      d.appendChild(r);
+    });
+    var w = document.createElement("p"); w.className = "warn"; w.id = "dup-" + t; d.appendChild(w);
+    box.appendChild(d);
+    d.querySelector("#tn-" + t).addEventListener("input", function(ev){ S.teams[t] = ev.target.value; save(); renderAll(true); });
+  });
+  var att = document.getElementById("att"); att.value = S.attacksA;
+  att.addEventListener("change", function(){ S.attacksA = att.value; save(); renderAll(); });
+  renderDups();
+}
+function renderDups(){
+  ["A", "B"].forEach(function(t){
+    var el = document.getElementById("dup-" + t); if(!el) return;
+    var d = dupNums(t);
+    el.textContent = d.length ? "Two players wear #" + d.join(", #") + ". Give each player their own number." : "";
+  });
+}
+
+/* ---------- top buttons and options ---------- */
+function resetTo(fn){ S.steps = []; UI.pending = {}; UI.view = 0; UI.sel = null; UI.mode = "setup"; fn(); save(); renderAll(); }
+document.getElementById("btn-shape").addEventListener("click", function(ev){
+  var go = function(){ resetTo(function(){ startingShape(S); }); };
+  if(S.steps.length) armed("shape", ev.currentTarget, "Tap again: clears " + S.steps.length + (S.steps.length === 1 ? " step" : " steps"), go); else go();
+});
+document.getElementById("btn-clear").addEventListener("click", function(ev){
+  var go = function(){ resetTo(function(){ S.players.forEach(function(p){ p.x = null; p.y = null; }); }); };
+  if(S.steps.length) armed("clear", ev.currentTarget, "Tap again: clears " + S.steps.length + (S.steps.length === 1 ? " step" : " steps"), go); else go();
+});
+document.getElementById("mode-setup").addEventListener("click", function(){ if(S.steps.length) return; UI.mode = "setup"; UI.pending = {}; UI.view = 0; UI.sel = null; renderAll(); });
+document.getElementById("mode-rec").addEventListener("click", function(){ UI.mode = "rec"; UI.view = S.steps.length; UI.sel = null; renderAll(); });
+var optAll = document.getElementById("opt-all"); optAll.checked = UI.showAll;
+optAll.addEventListener("change", function(){ UI.showAll = optAll.checked; savePrefs(); renderAll(true); });
+var optSpeed = document.getElementById("opt-speed"); optSpeed.value = String(UI.speed);
+optSpeed.addEventListener("change", function(){ UI.speed = parseFloat(optSpeed.value) || 1; savePrefs(); });
+function positionsText(){
+  var k = UI.view, pos = posAt(k, editable()), rows = [(UI.mode === "rec" ? stepName(k) : "Start") + "\nTeam\tJersey\tName\tWhere\tBasket\tDistance (ft)\tAngle\tHalf\tMoved this step (ft)\tMoved in total (ft)\tx (ft)\ty (ft)"];
+  S.players.forEach(function(p){
+    var at = pos[p.id], w = at ? whereAt(p.team, at.x, at.y) : null, m = moved(p.id, k);
+    rows.push([teamName(p.team), p.num, p.name, w ? w.zone : "On the bench", w ? w.basket : "", w ? fmtFt(w.ft) : "",
+      w ? angleText(w) : "", w ? (w.front ? "Attacking half" : "Defending half") : "", w ? fmtFt(m.step) : "", w ? fmtFt(m.total) : "",
+      w ? fmtFt(at.x) : "", w ? fmtFt(at.y) : ""].join("\t"));
+  });
+  return rows.join("\n");
+}
+document.getElementById("btn-copy").addEventListener("click", function(ev){
+  var b = ev.currentTarget, done = function(t){ b.textContent = t; setTimeout(function(){ b.textContent = "Copy positions"; }, 1600); };
+  try { navigator.clipboard.writeText(positionsText()).then(function(){ done("Copied"); }, function(){ done("Copy blocked"); }); }
+  catch(e) { done("Copy blocked"); }
+});
+
+/* ---------- render ---------- */
+function renderAll(keepForm){
+  if(UI.mode === "setup") UI.view = 0;
+  var pos = UI.mode === "setup" ? posAt(0, false) : posAt(UI.view, editable());
+  ["btn-shape", "btn-clear"].forEach(function(id){ var b = document.getElementById(id);
+    if(UI.armed !== id.slice(4)) b.textContent = id === "btn-shape" ? "Starting shape" : "Clear the court"; b.disabled = !!UI.playing; });
+  document.getElementById("toggles").hidden = UI.mode !== "rec";
+  renderModes(); renderSteps(); drawPaths(pos); drawTokens(pos); renderRecbar(); renderBench(); renderHint(); renderTable();
+  if(keepForm) renderDups(); else renderTeams();
+}
+drawCourt();
+renderAll();
+</script>
