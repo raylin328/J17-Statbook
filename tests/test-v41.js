@@ -54,8 +54,8 @@ console.log("\n-- data types");
     A.click(A.byText("button", "Add stat"));
     return A.ev("S.stats.find(s => s.label === " + JSON.stringify(label) + ")");
   };
-  ok("type picker offers six types", (() => { A.ev("UI.tab='stats'; render();");
-    return A.$$(".card").pop().querySelectorAll("select")[1].options.length === 6; })());
+  ok("type picker offers seven types (v4.14 adds Level)", (() => { A.ev("UI.tab='stats'; render();");
+    return A.$$(".card").pop().querySelectorAll("select")[1].options.length === 7; })());
 
   const hustle = addStat("Hustle", "practice", "scale", { min: 1, max: 5 });
   ok("scale stat stored with bounds", hustle && hustle.type === "scale" && hustle.min === 1 && hustle.max === 5);

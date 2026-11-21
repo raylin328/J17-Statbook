@@ -5,7 +5,8 @@ A self-contained, offline-first web app for tracking player performance in pract
 ## Quick Start
 
 Open one of these links on your iPad:
-- **Latest (recommended):** https://raylin328.github.io/J17-Statbook/latest/ (currently v4.13)
+- **Latest (recommended):** https://raylin328.github.io/J17-Statbook/latest/ (currently v4.14)
+- **v4.14:** https://raylin328.github.io/J17-Statbook/v4.14/
 - **v4.13:** https://raylin328.github.io/J17-Statbook/v4.13/
 - **v4.12.2:** https://raylin328.github.io/J17-Statbook/v4.12.2/
 - **v4.12:** https://raylin328.github.io/J17-Statbook/v4.12/
@@ -26,7 +27,10 @@ version on this site shares the same saved data on that device.
 - Drills grouped by area (Ball handling, Shooting, Passing, and so on) in collapsible sections
 - Switch drills on or off from Manage drills; the ones you're working on show in practice
 - Four measures: time, count, makes out of N, and rating (Beginner to Elite, never averaged)
-- A whole group in one pass, with a note for every result
+- A whole group in one pass, with a note for every result; each result saves as you enter it
+- Find a player or a drill by typing (or the iPad mic); players A–Z or by jersey
+- Level (Beginner to Elite) for your own practice stats too
+- Results CSV: one row per player per value, for one practice or all of them
 - Track improvement over time per player
 
 ### Game Stats
@@ -58,7 +62,13 @@ version on this site shares the same saved data on that device.
 
 ## Versions
 
-### v4.13 (Current)
+### v4.14 (Current)
+- Nothing typed is lost: the one-value drill list saves each result as you enter it (no Save button), and drafts stay when you switch drills or reload
+- Results CSV for one practice or all practices: one row per player per value, with notes
+- Find a player (name, number, nickname) and find a drill (name, area, description) during practice; players A–Z or by jersey; drills A–Z
+- Level (Beginner to Elite) as a type for custom practice stats
+
+### v4.13
 - Zones tab: a map of 17 named shot zones with makes, attempts and FG% in each; an Angles view; a Dots view across games
 - One game or all games; both teams, one team, our players, opponents, or one player
 - Tap the map to get a spot's zone, distance and angle

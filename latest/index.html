@@ -231,7 +231,11 @@ tfoot td{font-weight:500;border-top:2px solid var(--line-2);border-bottom:0}
     .zonetable td:first-child { white-space:normal; }
     @media print { .toast { display:none; } }
     @media (max-width:520px){ .zonectl .grid2 { grid-template-columns:1fr; } }
-  </style>
+  .finder{ display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin:0 0 10px }
+.finder input{ flex:1 1 220px; min-width:0 }
+.bstat{ font-size:12.5px; min-width:3.5em }
+.bstat.ok{ color:#2f7d4f } .bstat.err{ color:#b4471f }
+</style>
 </head>
 <body>
 <div class="board noprint" id="board"></div>
@@ -248,7 +252,7 @@ var OLDKEY = "j17.statbook.v1";
 var SCHEMA = 3;  // v3: typed stats, shot misses/positions, game clock
                  // v4.6 categories are additive to schema 3, NOT a bump: every version
                  // folder shares one localStorage, and older builds refuse newer schemas.
-var APP_VERSION = "4.13";
+var APP_VERSION = "4.14";
 
 /* ---------- state ---------- */
 var S = null;
@@ -309,7 +313,8 @@ var TYPES = [
   ["time",   "Time — seconds, with a stopwatch"],
   ["boolean","Yes / No"],
   ["text",   "Text — a note"],
-  ["scale",  "Scale — a slider, e.g. 1 to 10"]
+  ["scale",  "Scale — a slider, e.g. 1 to 10"],
+  ["level",  "Level — Beginner to Elite"]          // v4.14: saved as the word, like a drill rating
 ];
 
 // Substitution & Minutes Tracking (v4.5)
@@ -1126,8 +1131,8 @@ function isOn(d){ return d.active !== false; }
 function activeDrillCount(){ return (S.drills || []).filter(isOn).length; }
 function areaOf(d){ return d.area || "Other"; }
 function drillAreas(list){
-  var out = [], seen = {};
-  list.slice().sort(function(a, b){ return (a.order || 0) - (b.order || 0); }).forEach(function(d){
+  var out = [], seen = {}, az = !!(S && S.prefs && S.prefs.drillAZ);   // v4.14: A to Z inside each area when asked
+  list.slice().sort(function(a, b){ return az ? String(a.name).toLowerCase().localeCompare(String(b.name).toLowerCase()) : (a.order || 0) - (b.order || 0); }).forEach(function(d){
     var a = areaOf(d);
     if(!seen[a]){ seen[a] = []; out.push({ name: a, drills: seen[a] }); }
     seen[a].push(d);
@@ -1469,6 +1474,7 @@ function cellText(st, val){
   var t = stType(st);
   if(t === "boolean") return val.filter(isYes).length + "✓";
   if(t === "text") return "✎" + val.length;
+  if(t === "level"){ var lv = val[val.length - 1], rl = RATING_LEVELS.filter(function(x){ return x.label === lv; })[0]; return rl ? rl.short : String(lv); }
   var b = bestOf(st, val);
   return String(Math.round(Number(b) * 10) / 10);
 }
@@ -1482,7 +1488,7 @@ function fmtVal(st, v){
   if(v === null || v === undefined || v === "") return "—";
   var t = stType(st);
   if(t === "boolean") return isYes(v) ? "Yes" : "No";
-  if(t === "text") return String(v);
+  if(t === "text" || t === "level") return String(v);
   var n = Math.round(Number(v) * 100) / 100;
   if(t === "scale") return n + "/" + (st.max != null ? st.max : 10);
   return n + (st.unit ? " " + st.unit : "");
@@ -1690,6 +1696,7 @@ function renderBoard(){
   ]));
 }
 function render(){
+  UI._refill = [];   // v4.14: search boxes refill their lists in place instead of redrawing the page
   renderNav(); renderBoard();
   var ov = document.querySelector(".overlay"); if(ov) ov.remove();
   var v = document.getElementById("view"); v.innerHTML = "";
@@ -2697,6 +2704,10 @@ function entryWidget(st, pid, onDone){
     ]));
     return box;
   }
+  if(t === "level"){   // v4.14: one tap on a word records it
+    box.appendChild(levelChips("", function(lab){ if(lab) go(lab); }));
+    return box;
+  }
   if(t === "scale"){
     var lo = st.min != null ? st.min : 1, hi = st.max != null ? st.max : 10;
     var mid = Math.round((lo + hi) / 2);
@@ -2770,8 +2781,12 @@ function viewPractice(v, sess){
 
   if(t === "time") v.appendChild(stopwatchCard(st, UI.sel, null));
 
+  v.appendChild(pracFinder());
   var grid = el("div",{cls:"grid"});
-  (sess.playerIds || []).forEach(function(pid){
+  var fillGrid = function(){ grid.innerHTML = "";
+  var shown = pracPlayers(sess);
+  if(!shown.length) grid.appendChild(el("div",{cls:"sub",text:"No player here matches \u201c" + UI.pq + "\u201d."}));
+  shown.forEach(function(pid){
     var p = player(pid), m = tot[pid] || {n:0};
     var vals = m[drill];
     var line = isTally(st) ? String(vals || 0)
@@ -2781,7 +2796,8 @@ function viewPractice(v, sess){
     b.appendChild(el("span",{cls:"jn",text:p ? p.name : "?"}));
     b.appendChild(el("span",{cls:"ln num",text:line}));
     grid.appendChild(b);
-  });
+  }); };
+  fillGrid(); UI._refill.push(fillGrid);
   v.appendChild(grid);
 
   var dock = el("div",{cls:"dock noprint"});
@@ -2820,6 +2836,39 @@ function viewPractice(v, sess){
   v.appendChild(attemptsListCard(sess));
 }
 
+/* ---------- v4.14: find players and drills during practice ---------- */
+function findKey(s){   // lower case, no accents, and hyphens or dots count as spaces ("free throw" finds "Free-throw")
+  s = String(s == null ? "" : s).toLowerCase(); if(s.normalize) s = s.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  return s.replace(/[\s\-_\/.]+/g, " ").trim(); }
+function pracPlayers(sess){
+  var q = findKey(UI.pq).replace(/^#/, ""), sort = (S.prefs && S.prefs.pracSort) || "practice";
+  var ids = (sess.playerIds || []).filter(function(pid){
+    var p = player(pid); if(!p) return false; if(!q) return true;
+    return findKey(p.name).indexOf(q) > -1 || String(p.num || "") === q || (p.aliases || []).some(function(a){ return findKey(a).indexOf(q) > -1; });
+  });
+  if(sort === "az") ids.sort(function(a, b){ return findKey(pname(a)).localeCompare(findKey(pname(b))); });
+  if(sort === "num") ids.sort(function(a, b){ var x = parseInt((player(a) || {}).num, 10), y = parseInt((player(b) || {}).num, 10); return (isNaN(x) ? 999 : x) - (isNaN(y) ? 999 : y); });
+  return ids;
+}
+function pracFinder(){
+  var row = el("div",{cls:"finder"});
+  var q = el("input",{type:"text",id:"pracFind",enterkeyhint:"search",placeholder:"Find a player: name or number",value:UI.pq || "","aria-label":"Find a player"});
+  q.addEventListener("input", function(){ UI.pq = q.value; (UI._refill || []).forEach(function(f){ f(); }); });
+  row.appendChild(q);
+  if(UI.pq) row.appendChild(el("button",{cls:"btn sm",text:"Clear",on:{click:function(){ UI.pq = ""; render(); }}}));
+  var sort = (S.prefs && S.prefs.pracSort) || "practice";
+  [["practice","Practice order"],["az","A\u2013Z"],["num","#"]].forEach(function(o){
+    row.appendChild(el("button",{cls:"chip","aria-pressed": sort === o[0] ? "true" : "false",text:o[1],on:{click:function(){
+      S.prefs = S.prefs || {}; S.prefs.pracSort = o[0]; save(); render(); }}}));
+  });
+  return row;
+}
+function drillMatches(list, q){
+  q = findKey(q); if(!q) return list;
+  return list.filter(function(d){ return [d.name, d.short, areaOf(d), d.description].some(function(x){ return findKey(x).indexOf(q) > -1; }); })
+    .sort(function(a, b){ return findKey(a.name).localeCompare(findKey(b.name)); });
+}
+
 /* ---------- v4.7 drill-attempt UI ---------- */
 // seeded one-value solo drills are the stat chips above; everything else is recorded here
 function practiceDrills(){
@@ -2838,10 +2887,25 @@ function drillAttemptCard(sess){
     card.appendChild(el("p",{cls:"sub",text:"No drills are on. Switch some on under Manage drills below."}));
   } else {
     UI.attempt = UI.attempt || {};
-    if(!list.some(function(d){ return d.id === UI.attempt.drillId; })) UI.attempt = { drillId: list[0].id, pids: [], vals: [], note: "" };
+    if(!list.some(function(d){ return d.id === UI.attempt.drillId; })) UI.attempt = draftFor(sess, list[0].id);
     if(!Array.isArray(UI.attempt.pids)) UI.attempt.pids = [];
     var picked = drillById(UI.attempt.drillId);
-    card.appendChild(drillPicker(list, picked));
+    var dq = el("input",{type:"text",id:"drillFind",enterkeyhint:"search",placeholder:"Find a drill: name, area or description",value:UI.dq || "","aria-label":"Find a drill",style:"margin:4px 0 6px"});
+    var az = !!(S.prefs && S.prefs.drillAZ);
+    var pickBox = el("div",{});
+    var fillPick = function(){ pickBox.innerHTML = "";
+      if(UI.dq){
+        var hits = drillMatches(list, UI.dq), chips = el("div",{cls:"chips",style:"margin:8px 0"});
+        if(!hits.length) chips.appendChild(el("span",{cls:"sub",text:"No drill matches \u201c" + UI.dq + "\u201d. Switched-off drills are under Manage drills."}));
+        hits.forEach(function(d){ chips.appendChild(el("button",{cls:"chip","aria-pressed": d.id === picked.id ? "true" : "false",text:d.name,on:{click:function(){ UI.dq = ""; pickDrill(d.id); }}})); });
+        pickBox.appendChild(chips);
+      } else pickBox.appendChild(drillPicker(list, picked));
+    };
+    dq.addEventListener("input", function(){ UI.dq = dq.value; fillPick(); });
+    card.appendChild(el("div",{cls:"finder"},[dq,
+      el("button",{cls:"chip","aria-pressed": az ? "true" : "false",text:"A\u2013Z",on:{click:function(){ S.prefs = S.prefs || {}; S.prefs.drillAZ = !az; save(); render(); }}})]));
+    fillPick();
+    card.appendChild(pickBox);
     if(picked.description) card.appendChild(el("p",{cls:"sub",style:"margin:0 0 10px",text:picked.description}));
     card.appendChild(isBatchDrill(picked) ? drillBatch(sess, picked) : drillGroupEntry(sess, picked));
   }
@@ -2850,7 +2914,15 @@ function drillAttemptCard(sess){
   if(UI.drillReport) card.appendChild(drillReportNote(UI.drillReport));
   return card;
 }
-function pickDrill(id){ UI.attempt = { drillId: id, pids: [], vals: [], note: "" }; UI.batch = null; render(); }
+/* v4.14: what's typed for a drill is kept in the session (sess.adrafts for group and multi-stage drills,
+   sess.batch for the one-value list), saved as it changes, so switching drills or closing Safari loses nothing. */
+function draftFor(sess, id){
+  sess.adrafts = sess.adrafts || {};
+  return sess.adrafts[id] || (sess.adrafts[id] = { drillId: id, pids: [], vals: [], note: "" });
+}
+function pickDrill(id){ var sess = activeSession(); UI.attempt = sess ? draftFor(sess, id) : { drillId: id, pids: [], vals: [], note: "" }; save(); render(); }
+document.addEventListener("visibilitychange", function(){ if(document.visibilityState === "hidden") save(); });
+window.addEventListener("pagehide", function(){ save(); });
 // open/closed state is kept in UI by a stable key, so a re-render doesn't fold a section back up
 function areaSection(key, label, openByDefault, body){
   var det = el("details",{cls:"area"});
@@ -2916,45 +2988,64 @@ function valueInput(d, i, val, onInput){
   inp.addEventListener("input", function(){ onInput(inp.value); });
   return inp;
 }
+function batchRows(sess, d){ sess.batch = sess.batch || {}; return sess.batch[d.id] || (sess.batch[d.id] = {}); }
+function attemptById(sess, id){ return (sess.attempts || []).filter(function(a){ return a.id === id; })[0] || null; }
+// v4.14: a row becomes an attempt as soon as it has a valid value, and later changes update that same attempt
+function commitBatchRow(sess, d, pid){
+  var rows = batchRows(sess, d), row = rows[pid]; if(!row) return;
+  var a = row.aid ? attemptById(sess, row.aid) : null;
+  if(isBlank(row.val)){
+    if(a) sess.attempts = sess.attempts.filter(function(x){ return x !== a; });
+    row.aid = null; row.err = ""; row.wait = !isBlank(row.note);
+    if(isBlank(row.note)) delete rows[pid];
+    save(); return;
+  }
+  var ok = cleanStageValue(d, 0, row.val);
+  if(ok.error){ row.err = ok.error; save(); return; }
+  row.err = ""; row.wait = false;
+  if(a){
+    a.vals = [ok.value];
+    var nt = cleanNote(row.note || "", 400); if(nt.value) a.notes = nt.value; else delete a.notes;
+    save(); return;
+  }
+  var r = recordAttempt(d.id, [pid], [row.val], row.note);
+  if(r.error){ row.err = r.error; save(); return; }
+  row.aid = r.attempt.id; save();
+}
 function drillBatch(sess, d){
-  var wrap = el("div",{});
-  if(!UI.batch || UI.batch.drillId !== d.id) UI.batch = { drillId: d.id, rows: {} };
+  var wrap = el("div",{}), rows = batchRows(sess, d);
+  Object.keys(rows).forEach(function(pid){ var r = rows[pid]; if(r.aid && !attemptById(sess, r.aid)) delete rows[pid]; });   // removed below
   var m = stageMeasure(d, 0), hint = stageHint(d, 0);
   wrap.appendChild(el("p",{cls:"sub",style:"margin:0 0 6px",
     text: (m === "rating" ? "Tap a level for each player" : "Enter each player's result" + (hint ? " (" + hint + ")" : "")) +
-          ". Leave out anyone who didn't run it."}));
-  (sess.playerIds || []).forEach(function(pid){
-    var p = player(pid); if(!p) return;
-    var row = UI.batch.rows[pid] || (UI.batch.rows[pid] = { val: "", note: "" });
-    var line = el("div",{cls:"brow"}), ctl = el("div",{cls:"bctl"});
-    line.appendChild(el("div",{cls:"bname",text:p.name}));
-    if(m === "rating") ctl.appendChild(levelChips(row.val, function(lab){ row.val = lab; render(); }));
-    else ctl.appendChild(valueInput(d, 0, row.val, function(v){ row.val = v; }));
-    var note = el("input",{type:"text",cls:"bnote",placeholder:"Note",value:row.note,"aria-label":"Note for " + p.name});
-    note.addEventListener("input", function(){ row.note = note.value; });
-    ctl.appendChild(note);
-    line.appendChild(ctl);
-    wrap.appendChild(line);
-  });
-  wrap.appendChild(el("button",{cls:"btn solid wide",style:"margin-top:10px",text:"Save results",
-    on:{click:function(){ saveDrillBatch(d); }}}));
+          ". Each one saves as you enter it; leave out anyone who didn't run it."}));
+  var list = el("div",{});
+  var fill = function(){ list.innerHTML = "";
+    var shown = pracPlayers(sess);
+    if(!shown.length) list.appendChild(el("div",{cls:"sub",text:"No player here matches “" + UI.pq + "”."}));
+    shown.forEach(function(pid){
+      var p = player(pid); if(!p) return;
+      var row = rows[pid] || { val: "", note: "" }, mine = function(){ return rows[pid] || (rows[pid] = row); };
+      var line = el("div",{cls:"brow","data-pid":pid}), ctl = el("div",{cls:"bctl"});
+      var status = el("span",{cls:"bstat"});
+      var show = function(){ status.textContent = row.err ? row.err : row.aid ? "Saved" : row.wait ? "Note kept: add a result to save it" : ""; status.className = "bstat" + (row.err ? " err" : row.aid ? " ok" : ""); };
+      line.appendChild(el("div",{cls:"bname",text:p.name}));
+      if(m === "rating") ctl.appendChild(levelChips(row.val, function(lab){ mine().val = lab; commitBatchRow(sess, d, pid); render(); }));
+      else ctl.appendChild(valueInput(d, 0, row.val, function(v){ mine().val = v; commitBatchRow(sess, d, pid); show(); }));
+      var note = el("input",{type:"text",cls:"bnote",placeholder:"Note",value:row.note || "","aria-label":"Note for " + p.name});
+      note.addEventListener("input", function(){ mine().note = note.value; commitBatchRow(sess, d, pid); show(); });
+      ctl.appendChild(note);
+      ctl.appendChild(status); show();
+      line.appendChild(ctl);
+      list.appendChild(line);
+    });
+  };
+  fill(); UI._refill.push(fill);
+  wrap.appendChild(list);
+  var saved = Object.keys(rows).filter(function(pid){ return rows[pid].aid; }).length;
+  if(saved) wrap.appendChild(el("button",{cls:"btn wide",style:"margin-top:10px",text:"Start another round (" + saved + " saved stay in the list below)",
+    on:{click:function(){ sess.batch[d.id] = {}; save(); render(); toast("New round: the saved results stay below"); }}}));
   return wrap;
-}
-function saveDrillBatch(d){
-  var saved = 0, errs = [];
-  Object.keys(UI.batch.rows).forEach(function(pid){
-    var row = UI.batch.rows[pid];
-    if(isBlank(row.val)){
-      if(!isBlank(row.note)) errs.push(pname(pid) + ": add a result to save the note");
-      return;
-    }
-    var r = recordAttempt(d.id, [pid], [row.val], row.note);
-    if(r.error) errs.push(pname(pid) + ": " + r.error);
-    else { saved++; delete UI.batch.rows[pid]; }
-  });
-  if(errs.length) toast((saved ? "Saved " + saved + ". " : "") + errs[0] + (errs.length > 1 ? " (+" + (errs.length - 1) + " more)" : ""));
-  else toast(saved ? "Saved " + saved + " result" + (saved === 1 ? "" : "s") : "Nothing to save yet");
-  render();
 }
 function drillGroupEntry(sess, d){
   var wrap = el("div",{});
@@ -2962,7 +3053,7 @@ function drillGroupEntry(sess, d){
   wrap.appendChild(stageValueInputs(d));
   var note = el("input",{type:"text",cls:"bnote",placeholder:"Note (optional)",value:UI.attempt.note || "",
     style:"margin:4px 0 8px;width:100%","aria-label":"Note"});
-  note.addEventListener("input", function(){ UI.attempt.note = note.value; });
+  note.addEventListener("input", function(){ UI.attempt.note = note.value; save(); });
   wrap.appendChild(note);
   var range = drillGroupRange(d), need = drillValueCount(d), n = UI.attempt.pids.length;
   var msg = [range.min === range.max
@@ -2975,7 +3066,8 @@ function drillGroupEntry(sess, d){
       var r = recordAttempt(d.id, UI.attempt.pids.slice(), UI.attempt.vals.slice(), UI.attempt.note);
       if(r.error){ toast(cap(r.error)); return; }
       toast(d.name + " \u00b7 " + attemptSummary(r.attempt));
-      UI.attempt = { drillId: d.id, pids: [], vals: [], note: "" };
+      sess.adrafts = sess.adrafts || {}; delete sess.adrafts[d.id];
+      UI.attempt = draftFor(sess, d.id); save();
       render();
     }}});
   btn.disabled = !(n >= range.min && n <= range.max);
@@ -3462,6 +3554,8 @@ function viewBox(v){
   v.appendChild(el("div",{cls:"btns noprint",style:"margin-top:18px"},[
     el("button",{cls:"btn",text:"Export CSV",on:{click:function(){
       download("session-" + dstamp(sess.date) + ".csv", sessionCSV(sess), "text/csv;charset=utf-8"); }}}),
+    sess.kind === "practice" ? el("button",{cls:"btn",text:"Export results CSV",on:{click:function(){
+      download("results-" + dstamp(sess.date) + ".csv", resultsCSV([sess]), "text/csv;charset=utf-8"); }}}) : null,
     el("button",{cls:"btn",text:"Print",on:{click:function(){ window.print(); }}})
   ]));
   var nt = el("textarea",{placeholder:"Notes for this session"});
@@ -3503,7 +3597,9 @@ function viewSessions(v){
       S.activeId = null; UI.setup = null; UI.tab = "session"; render(); }}}),
     el("button",{cls:"btn",text:"Backup all (JSON)",on:{click:function(){
       download("j17-statbook-" + dstamp(Date.now()) + ".json", JSON.stringify(S), "application/json"); }}}),
-    el("button",{cls:"btn",text:"Restore (JSON)",on:{click:importBackup}})
+    el("button",{cls:"btn",text:"Restore (JSON)",on:{click:importBackup}}),
+    el("button",{cls:"btn",text:"All practice results (CSV)",on:{click:function(){
+      download("practice-results-" + dstamp(Date.now()) + ".csv", resultsCSV(), "text/csv;charset=utf-8"); }}})
   ]));
   
   v.appendChild(el("div",{cls:"card"},[
@@ -3538,6 +3634,8 @@ function viewSessions(v){
         S.activeId = sess.id; UI.sel = null; UI.tab = "box"; save(); render(); }}}),
       el("button",{cls:"btn sm",text:"CSV",on:{click:function(){
         download("session-" + dstamp(sess.date) + ".csv", sessionCSV(sess), "text/csv;charset=utf-8"); }}}),
+      sess.kind === "practice" ? el("button",{cls:"btn sm",text:"Results CSV",on:{click:function(){
+        download("results-" + dstamp(sess.date) + ".csv", resultsCSV([sess]), "text/csv;charset=utf-8"); }}}) : null,
       el("button",{cls:"btn sm danger",text:"Delete",on:{click:function(){
         if(!confirm("Delete this session permanently?")) return;
         S.sessions = S.sessions.filter(function(x){ return x.id !== sess.id; });
@@ -4300,10 +4398,40 @@ function attemptsCSV(){
   });
   return rows.map(toCSVLine).join("\n");
 }
+/* v4.14: practice results, readable in any spreadsheet. One row per player per value:
+   practice stats and drill attempts together, with the practice, date and time, the drill and
+   its stage, the value with its "out of" and unit, who else was in the group, and the note. */
+function resultsCSV(list){
+  var rows = [], hm = function(t){ var d = new Date(t); return ("0" + d.getHours()).slice(-2) + ":" + ("0" + d.getMinutes()).slice(-2); };
+  (list || S.sessions).filter(function(s){ return s && s.kind === "practice"; }).forEach(function(s){
+    var date = dstamp(s.date), title = s.title || "Practice";
+    (s.events || []).forEach(function(e){
+      var st = statByKey(e.key), p = player(e.pid); if(!st) return;
+      var t = stType(st), v = rawVal(st, e.v);
+      rows.push([e.t || 0, date, title, hm(e.t || s.date), st.label, "Practice stats", "", t, p ? p.name : "?", p ? (p.num || "") : "", "",
+                 t === "text" ? noFormula(v) : v, t === "scale" ? (st.max != null ? st.max : 10) : "", st.unit || "", ""]);
+    });
+    (s.attempts || []).forEach(function(a){
+      var d = drillById(a.drillId);
+      (a.pids || []).forEach(function(pid){
+        var p = player(pid), others = a.pids.filter(function(x){ return x !== pid; }).map(pname).join("; ");
+        (a.vals || []).forEach(function(v, i){
+          var m = d ? stageMeasure(d, i) : "";
+          rows.push([a.t || 0, date, title, hm(a.t || s.date), d ? d.name : "?", d ? areaOf(d) : "", d && drillValueCount(d) > 1 ? stageName(d, i) : "",
+                     m, p ? p.name : "?", p ? (p.num || "") : "", others, v, m === "makes" ? stageOutOf(d, i) : "", d ? unitShort(stageUnit(d, i)) : "", noFormula(a.notes || "")]);
+        });
+      });
+    });
+  });
+  rows.sort(function(a, b){ return a[0] - b[0]; });
+  return [["date","practice","time","drill","area","stage","measure","player","jersey","with","value","out_of","unit","note"]]
+    .concat(rows.map(function(r){ return r.slice(1); })).map(toCSVLine).join("\n");
+}
 function parseValue(st, raw){
   if(raw === "" || raw === undefined || raw === null) return isTally(st) ? 1 : null;
   var t = stType(st);
   if(t === "text") return raw;
+  if(t === "level") return ratingLabel(raw) || raw;
   if(t === "boolean") return /^(true|1|yes|y)$/i.test(raw);
   var n = parseFloat(raw);
   return isNaN(n) ? (isTally(st) ? 1 : null) : n;

@@ -62,8 +62,7 @@ function view(w, name) { all(w, ".zoneviews .chip").filter(function(c) { return 
 // ---- which spot is which zone ---------------------------------------------------------------
 (function() {
   var w = newApp();
-  eq("version", w.APP_VERSION, "4.13");
-  ok("tab title shows it", w.document.title === "J17 Stat Book 4.13", w.document.title);
+  ok("version 4.13 or later (exact version: test-v414.js)", parseFloat(w.APP_VERSION.replace(/^4\./, "")) >= 13, w.APP_VERSION);
   eq("17 zones", w.ZONES.length, 17);
   eq("in this order", w.ZONES.map(function(z) { return z.name; }).join("; "),
      "At the rim; Paint; Nail (free-throw line); Left short corner; Left wing midrange; Left elbow; Top of the key midrange; " +

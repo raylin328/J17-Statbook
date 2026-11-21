@@ -140,9 +140,10 @@ function type(w, input, v) { input.value = v; input.dispatchEvent(new w.Event("i
   rows = card(w).querySelectorAll(".brow");
   eq("tapped level shows as selected", rows[0].querySelector('.lvl[aria-pressed="true"]').textContent, "ADV");
   type(w, rows[0].querySelector(".bnote"), "Late rotating on skip passes");
-  button(card(w), "Save results").click();
+  ok("no Save button any more (v4.14)", !button(card(w), "Save results"));
+  w.render();   // a redraw shows what was saved
   var at = w.activeSession().attempts;
-  eq("two ratings saved in one pass", at.length, 2);
+  eq("two ratings saved as they were tapped (v4.14)", at.length, 2);
   eq("first rating", at[0].vals[0], "Advanced");
   eq("its note", at[0].notes, "Late rotating on skip passes");
   eq("second rating", at[1].vals[0], "Elite");
@@ -152,9 +153,10 @@ function type(w, input, v) { input.value = v; input.dispatchEvent(new w.Event("i
   rows = card(w).querySelectorAll(".brow");
   type(w, rows[0].querySelector("input[type=number]"), "7");
   type(w, rows[1].querySelector("input[type=number]"), "11");
-  button(card(w), "Save results").click();
-  eq("the valid result saved", w.activeSession().attempts.length, 3);
-  eq("the bad one is kept to fix", w.UI.batch.rows.p1.val, "11");
+  eq("the valid result saved as it was typed (v4.14)", w.activeSession().attempts.length, 3);
+  var ftId = w.UI.attempt.drillId;
+  eq("the bad one is kept to fix, in the session (v4.14)", w.activeSession().batch[ftId].p1.val, "11");
+  ok("and says why", /can't be more than 10/.test(card(w).querySelectorAll(".brow")[1].querySelector(".bstat").textContent));
 
   choose(w, "Strength combine");
   ok("a combine uses the pick-and-record flow", !card(w).querySelector(".brow") && !!button(card(w), "Record attempt"));
