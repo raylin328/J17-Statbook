@@ -52,7 +52,7 @@ const eventCSV = aw.eval("eventsCSV()");
 
 ok("players CSV has header", playerCSV.split("\n")[0] === "id,name,jersey number,category,desc,aliases,notes");  // v4.6: + category
 ok("players CSV has Riley", playerCSV.indexOf("p1,Riley Park,,Miscellaneous,black,Rylee Park,best 3pt") > -1, playerCSV.split("\n")[1]);
-ok("sessions CSV has header", sessionCSV.split("\n")[0] === "id,date,kind,format,title,team1_name,team1_players,team2_name,team2_players,final_score_1,final_score_2,period_min,done,notes");
+ok("sessions CSV has header", sessionCSV.split("\n")[0] === "id,date,kind,format,title,team1_name,team1_players,team2_name,team2_players,final_score_1,final_score_2,period_min,done,notes,team1_opp,team2_opp");
 ok("sessions CSV has the game", sessionCSV.indexOf("s1,1725360000000,game,quarters") > -1);
 ok("teams encoded as pipe-delimited", sessionCSV.indexOf("Black,p1|p2,White") > -1);
 ok("events CSV has header", eventCSV.split("\n")[0] === "id,session_id,player_id,stat_key,value,period,team,timestamp,made,x,y,clock,assist_for,court");

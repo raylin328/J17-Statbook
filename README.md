@@ -5,7 +5,8 @@ A self-contained, offline-first web app for tracking player performance in pract
 ## Quick Start
 
 Open one of these links on your iPad:
-- **Latest (recommended):** https://raylin328.github.io/J17-Statbook/latest/ (currently v4.14)
+- **Latest (recommended):** https://raylin328.github.io/J17-Statbook/latest/ (currently v4.15)
+- **v4.15:** https://raylin328.github.io/J17-Statbook/v4.15/
 - **v4.14:** https://raylin328.github.io/J17-Statbook/v4.14/
 - **v4.13:** https://raylin328.github.io/J17-Statbook/v4.13/
 - **v4.12.2:** https://raylin328.github.io/J17-Statbook/v4.12.2/
@@ -62,7 +63,11 @@ version on this site shares the same saved data on that device.
 
 ## Versions
 
-### v4.14 (Current)
+### v4.15 (Current)
+- Opponents survive the spreadsheet files: Import CSVs reads opponents.csv (ids, teams, numbers, names), and never mistakes it for players.csv
+- sessions.csv keeps which opponent team each side was (`team1_opp`, `team2_opp`); older files link by team name
+
+### v4.14
 - Nothing typed is lost: the one-value drill list saves each result as you enter it (no Save button), and drafts stay when you switch drills or reload
 - Results CSV for one practice or all practices: one row per player per value, with notes
 - Find a player (name, number, nickname) and find a drill (name, area, description) during practice; players A–Z or by jersey; drills A–Z

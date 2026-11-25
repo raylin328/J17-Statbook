@@ -38,8 +38,7 @@ function csvRows(text) { return text.split("\n").map(function(l) { return l; });
 // ---- version -----------------------------------------------------------------------
 (function() {
   var w = newApp();
-  eq("version", w.APP_VERSION, "4.14");
-  ok("tab title shows it", w.document.title === "J17 Stat Book 4.14", w.document.title);
+  ok("version 4.14 or later (exact version: test-v415.js)", parseFloat(w.APP_VERSION.replace(/^4\./, "")) >= 14, w.APP_VERSION);
 })();
 
 // ---- Level: Beginner to Elite as a practice stat ------------------------------------

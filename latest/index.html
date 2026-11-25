@@ -252,7 +252,7 @@ var OLDKEY = "j17.statbook.v1";
 var SCHEMA = 3;  // v3: typed stats, shot misses/positions, game clock
                  // v4.6 categories are additive to schema 3, NOT a bump: every version
                  // folder shares one localStorage, and older builds refuse newer schemas.
-var APP_VERSION = "4.14";
+var APP_VERSION = "4.15";
 
 /* ---------- state ---------- */
 var S = null;
@@ -4333,16 +4333,17 @@ function jerseyFrom(row){
 }
 function sessionsCSV(){
   var rows = [["id","date","kind","format","title","team1_name","team1_players","team2_name","team2_players",
-               "final_score_1","final_score_2","period_min","done","notes"]];
+               "final_score_1","final_score_2","period_min","done","notes","team1_opp","team2_opp"]];   // v4.15: the opponent team ids
   S.sessions.forEach(function(s){
     if(s.kind === "game"){
       rows.push([s.id, s.date, s.kind, s.format, s.title || "",
         s.teams[0].name, s.teams[0].playerIds.join("|"),
         s.teams[1].name, s.teams[1].playerIds.join("|"),
-        nz(s.finalScore[0]), nz(s.finalScore[1]), nz(s.periodMin), s.done ? "true" : "false", s.notes || ""]);
+        nz(s.finalScore[0]), nz(s.finalScore[1]), nz(s.periodMin), s.done ? "true" : "false", s.notes || "",
+        s.teams[0].opp || "", s.teams[1].opp || ""]);
     } else {
       rows.push([s.id, s.date, s.kind, "", s.title || "", "", (s.playerIds || []).join("|"), "", "",
-        "", "", "", s.done ? "true" : "false", s.notes || ""]);
+        "", "", "", s.done ? "true" : "false", s.notes || "", "", ""]);
     }
   });
   return rows.map(toCSVLine).join("\n");
@@ -4601,6 +4602,42 @@ function importPlayersCSV(text){
   importPlayersCSV.updated = rep.updated;
   return rep.added;
 }
+/* v4.15: opponents.csv back in. Teams are made from team_id and team; players keep their ids, so old
+   games and their stats find them again. Someone already here only gets blanks filled in. */
+function importOpponentsCSV(text){
+  var rep = { teams: 0, players: 0, updated: 0 };
+  if(!S.oppTeams) S.oppTeams = []; if(!S.opponents) S.opponents = [];
+  parseCSV(text).forEach(function(row){
+    var id = cleanText(row.id), tid = cleanText(row.team_id), tname = cleanText(row.team);
+    if(!id || !tid) return;
+    if(!oppTeamById(tid)){ S.oppTeams.push({ id: tid, name: (tname || "Opponent").slice(0, 60) }); rep.teams++; }
+    var num = cleanText(row.jersey).replace(/[^0-9]/g, "").slice(0, 3), nm = cleanText(row.name).slice(0, 60), desc = cleanText(row.description).slice(0, 80);
+    var have = S.opponents.filter(function(o){ return o.id === id; })[0];
+    if(have){
+      var ch = false;
+      if(!have.num && num){ have.num = num; ch = true; }
+      if(!have.name && nm){ have.name = nm; ch = true; }
+      if(!have.desc && desc){ have.desc = desc; ch = true; }
+      if(ch) rep.updated++;
+      return;
+    }
+    var o = { id: id, team: tid, num: num, name: nm, desc: desc, aliases: [], active: true };
+    if(row.retired === "true") o.retired = true;
+    S.opponents.push(o); rep.players++;
+  });
+  return rep;
+}
+// which opponent team a side of an imported game was: the team1_opp/team2_opp column, or for older files a
+// single opponent team of that name, when every player on the side is one of the opponents (or the Team row)
+function linkOppSide(side, oppId){
+  if(oppId){
+    if(!oppTeamById(oppId)){ if(!S.oppTeams) S.oppTeams = []; S.oppTeams.push({ id: oppId, name: side.name || "Opponent" }); }
+    side.opp = oppId; return;
+  }
+  var named = (S.oppTeams || []).filter(function(t){ return t.name.toLowerCase() === String(side.name || "").toLowerCase(); });
+  var allOpp = side.playerIds.every(function(pid){ return isTeamRow(pid) || (S.opponents || []).some(function(o){ return o.id === pid; }); });
+  if(named.length === 1 && allOpp) side.opp = named[0].id;
+}
 function importSessionsCSV(text){
   var added = 0;
   parseCSV(text).forEach(function(row){
@@ -4621,6 +4658,7 @@ function importSessionsCSV(text){
       events: [], notes: row.notes || ""
     };
     if(game && row.period_min) sess.periodMin = parseInt(row.period_min, 10) || 8;
+    if(game){ linkOppSide(sess.teams[0], cleanText(row.team1_opp || "")); linkOppSide(sess.teams[1], cleanText(row.team2_opp || "")); }
     S.sessions.push(sess);
     added++;
   });
@@ -4650,8 +4688,9 @@ function importEventsCSV(text){
   importEventsCSV.orphans = orphans;
   return added;
 }
-function importFromCSVs(playerText, sessionText, eventText, statText){
+function importFromCSVs(playerText, sessionText, eventText, statText, oppText){
   var st = statText ? importStatsCSV(statText) : 0;     // first, so values parse by the right type
+  var op = oppText ? importOpponentsCSV(oppText) : { teams: 0, players: 0, updated: 0 };   // v4.15: before sessions, so games link to them
   importPlayersCSV.updated = 0; importPlayersCSV.report = null;
   var p = playerText ? importPlayersCSV(playerText) : 0;
   var pr = importPlayersCSV.report;
@@ -4663,7 +4702,7 @@ function importFromCSVs(playerText, sessionText, eventText, statText){
   save();
   return { stats: st, players: p, updated: importPlayersCSV.updated || 0,
            sessions: s, events: e, orphans: importEventsCSV.orphans || 0,
-           skipped: pr ? pr.errors.length : 0 };
+           skipped: pr ? pr.errors.length : 0, oppTeams: op.teams, opponents: op.players };
 }
 function detectExcel(bytes){
   if(!bytes || bytes.length < 4) return false;
@@ -4690,6 +4729,7 @@ function csvKind(text){
   if(has("session_id","stat_key")) return "events";
   if(has("id","kind","team1_name")) return "sessions";
   if(has("key","type","scope")) return "stats";
+  if(has("id","team_id","team","jersey")) return "opponents";   // v4.15: never read as players
   if(has("id","name")) return "players";
   var at = playerCols(h);
   if(at.name !== undefined || (at.id !== undefined && Object.keys(at).length > 1)) return "players";
@@ -4703,13 +4743,14 @@ function importCSVFiles(){
     if(!files.length) return;
     var texts = {}, unknown = [], left = files.length;
     function finish(){
-      if(!texts.players && !texts.sessions && !texts.events && !texts.stats){
+      if(!texts.players && !texts.sessions && !texts.events && !texts.stats && !texts.opponents){
         toast("None of those look like Stat Book CSVs"); return;
       }
-      var r = importFromCSVs(texts.players, texts.sessions, texts.events, texts.stats);
+      var r = importFromCSVs(texts.players, texts.sessions, texts.events, texts.stats, texts.opponents);
       render();
       var msg = "Added " + r.players + " players, " + r.sessions + " sessions, " + r.events + " entries" +
                 (r.stats ? ", " + r.stats + " stats" : "") +
+                (r.opponents || r.oppTeams ? ", " + r.opponents + " opponents" + (r.oppTeams ? " on " + r.oppTeams + " new teams" : "") : "") +
                 (r.updated ? " · filled in details for " + r.updated + " existing players" : "");
       if(r.orphans) msg += " · " + r.orphans + " entries skipped — include sessions.csv";
       if(r.skipped) msg += " · " + r.skipped + " player rows skipped — see Players";
