@@ -1,0 +1,702 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Practice Prototype 2</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<style>
+:root{
+  --bg:#f4f2ee; --surface:#ffffff; --ink:#1d2430; --ink-2:#5f6b7a; --line:#d9d4cb; --soft:#efebe4; --head:#e9e5dd;
+  --accent:#1f6f5c; --accent-ink:#ffffff; --accent-soft:#dcefe8; --warn:#b4471f; --warn-soft:#f7e3da; --gold:#b98a10;
+  --good:#2f7d4f; --bad:#b4471f; --sel:#2b6cb0; --sel-soft:#e3eefb;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --bg:#14181e; --surface:#1d232b; --ink:#e8ecf1; --ink-2:#9aa6b4; --line:#323b46; --soft:#232a33; --head:#262e37;
+  --accent:#4fb596; --accent-ink:#0d1a15; --accent-soft:#1f3a31; --warn:#ef8a62; --warn-soft:#3d241a; --gold:#e0b84a;
+  --good:#5cc48a; --bad:#ef8a62; --sel:#6aa6e8; --sel-soft:#1e3047; color-scheme:dark } }
+:root[data-theme="dark"]{
+  --bg:#14181e; --surface:#1d232b; --ink:#e8ecf1; --ink-2:#9aa6b4; --line:#323b46; --soft:#232a33; --head:#262e37;
+  --accent:#4fb596; --accent-ink:#0d1a15; --accent-soft:#1f3a31; --warn:#ef8a62; --warn-soft:#3d241a; --gold:#e0b84a;
+  --good:#5cc48a; --bad:#ef8a62; --sel:#6aa6e8; --sel-soft:#1e3047; color-scheme:dark }
+*{ box-sizing:border-box }
+body{ margin:0; background:var(--bg); color:var(--ink); font:15px/1.4 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; -webkit-text-size-adjust:100% }
+button{ font:inherit; color:inherit; background:var(--surface); border:1px solid var(--line); border-radius:10px; min-height:44px; padding:0 14px; cursor:pointer; touch-action:manipulation }
+button:disabled{ opacity:.45; cursor:default }
+button.primary{ background:var(--accent); color:var(--accent-ink); border-color:var(--accent); font-weight:600 }
+button.ghost{ background:transparent; border-color:transparent }
+button.danger{ color:var(--warn) }
+button.armed{ background:var(--warn); color:#fff; border-color:var(--warn) }
+button[aria-pressed="true"]{ background:var(--ink); color:var(--surface); border-color:var(--ink) }
+input, textarea, select{ font:inherit; color:inherit; background:var(--surface); border:1px solid var(--line); border-radius:10px; padding:10px 12px; min-height:44px; width:100% }
+label.f{ display:block; font-size:12px; font-weight:600; letter-spacing:.06em; text-transform:uppercase; color:var(--ink-2); margin:12px 0 6px }
+.muted{ color:var(--ink-2) } .small{ font-size:13px } .row{ display:flex; gap:8px; align-items:center; flex-wrap:wrap } .grow{ flex:1 1 auto; min-width:0 }
+.card{ background:var(--surface); border:1px solid var(--line); border-radius:14px; padding:14px }
+.chip{ min-height:38px; padding:0 12px; border-radius:19px; font-size:14px }
+.lbl{ font-size:12px; font-weight:700; letter-spacing:.07em; text-transform:uppercase; color:var(--ink-2) }
+.hint{ border:1px dashed var(--line); border-radius:12px; padding:18px; color:var(--ink-2); text-align:center }
+.banner{ background:var(--warn-soft); color:var(--warn); border:1px solid var(--warn); border-radius:10px; padding:10px 12px; font-weight:600 }
+.wrap{ max-width:1100px; margin:0 auto }
+
+header.app{ position:sticky; top:0; z-index:20; display:flex; align-items:center; gap:10px; flex-wrap:wrap;
+  padding:8px max(14px, env(safe-area-inset-right, 0px)) 8px max(14px, env(safe-area-inset-left, 0px)); background:var(--surface); border-bottom:1px solid var(--line) }
+header.app .brand{ font-weight:700 } header.app .brand small{ font-weight:500; color:var(--ink-2); margin-left:6px }
+header.app nav{ display:flex; gap:6px; flex-wrap:wrap; margin-left:auto } header.app nav button{ min-height:40px }
+#stamp{ font-size:12px; color:var(--ink-2) } #stamp.bad{ color:var(--warn); font-weight:700 }
+main{ padding:12px max(14px, env(safe-area-inset-right, 0px)) 14px max(14px, env(safe-area-inset-left, 0px)) }
+
+/* the sheet */
+.sheetview{ display:flex; flex-direction:column; gap:10px; height:calc(100vh - var(--hh, 60px) - 26px); height:calc(100dvh - var(--hh, 60px) - 26px) }
+.bar{ background:var(--surface); border:1px solid var(--line); border-radius:14px; padding:10px 12px; display:flex; flex-direction:column; gap:8px; flex:0 0 auto }
+.bar .where{ font-weight:700 } .bar .where span{ font-weight:500; color:var(--ink-2) }
+.bar .entry{ display:flex; gap:8px; align-items:center }
+.bar .entry input{ font-size:19px; min-height:52px; flex:1 1 auto; min-width:0 }
+.bar .tools{ display:flex; gap:6px; flex-wrap:wrap; align-items:center }
+.bar .tools button{ min-height:40px; padding:0 12px }
+.bar .read{ font-size:13.5px; color:var(--ink-2); min-height:20px }
+.bar .read b{ color:var(--ink); font-weight:600 }
+.swface{ font-variant-numeric:tabular-nums; font-weight:700; min-width:5.2em; text-align:center } .swface:empty{ display:none }
+.bar .entry button{ white-space:nowrap }
+button.running{ background:var(--warn); color:#fff; border-color:var(--warn) }
+.tablebox{ flex:1 1 auto; min-height:0; overflow:auto; border:1px solid var(--line); border-radius:14px; background:var(--surface); -webkit-overflow-scrolling:touch }
+table.sheet{ border-collapse:separate; border-spacing:0; font-size:14px }
+table.sheet th, table.sheet td{ border-right:1px solid var(--line); border-bottom:1px solid var(--line); padding:0; vertical-align:top; background:var(--surface) }
+table.sheet thead th{ position:sticky; top:0; z-index:3; background:var(--head) }
+table.sheet .pcell{ position:sticky; left:0; z-index:2; background:var(--head) }
+table.sheet thead th.pcell{ z-index:4 }
+.colh{ display:flex; align-items:stretch; width:180px } .colh button{ border:0; border-radius:0; background:transparent; min-height:48px; text-align:left; padding:6px 10px; font-weight:600; flex:1 1 auto; line-height:1.2 }
+.colh button.menu{ flex:0 0 36px; padding:0; color:var(--ink-2); text-align:center }
+.colh button[aria-pressed="true"]{ background:var(--sel-soft); color:var(--ink) }
+th.addcol button{ border:0; border-radius:0; background:transparent; min-height:48px; padding:0 16px; color:var(--accent); font-weight:700; white-space:nowrap }
+.pbtn{ display:block; width:170px; border:0; border-radius:0; background:transparent; text-align:left; padding:8px 10px; min-height:58px }
+.pbtn b{ display:block; white-space:nowrap; overflow:hidden; text-overflow:ellipsis } .pbtn span{ font-size:12.5px; color:var(--ink-2) }
+.cell{ display:block; width:180px; min-height:58px; border:0; border-radius:0; background:transparent; text-align:left; padding:6px 10px; cursor:pointer }
+.cell .tx{ display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; word-break:break-word }
+.cell .rd{ display:block; font-size:11.5px; color:var(--ink-2); margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis }
+.cell .up{ color:var(--good); font-weight:700 } .cell .down{ color:var(--bad); font-weight:700 } .cell .pb{ color:var(--gold); font-weight:700 }
+.cell.na .tx{ color:var(--ink-2); font-style:italic }
+td.on .cell{ background:var(--sel-soft); box-shadow:inset 0 0 0 2px var(--sel) }
+tr.rowon .pbtn{ background:var(--sel-soft) }
+td.addrow{ background:var(--soft) }
+.panel{ background:var(--surface); border:1px solid var(--line); border-radius:14px; padding:12px; display:flex; flex-direction:column; gap:8px; flex:0 0 auto; max-height:46vh; overflow:auto }
+.tag{ display:inline-flex; align-items:center; gap:4px; font-size:12.5px; padding:2px 8px; border-radius:12px; background:var(--soft) }
+.grid2{ display:grid; grid-template-columns:300px minmax(0,1fr); gap:14px }
+.list{ display:flex; flex-direction:column; gap:6px } .list button.item{ text-align:left }
+table.t{ border-collapse:collapse; width:100%; font-size:14px } table.t th, table.t td{ border-bottom:1px solid var(--line); padding:8px 6px; text-align:left; vertical-align:top }
+table.t th{ font-size:12px; color:var(--ink-2); text-transform:uppercase; letter-spacing:.05em }
+.tablewrap{ overflow-x:auto }
+.setgrid{ display:grid; grid-template-columns:repeat(auto-fill, minmax(320px, 1fr)); gap:12px }
+.spark{ display:block }
+@media (max-width: 1000px){ .grid2{ grid-template-columns:1fr } .sheetview{ height:auto } .tablebox{ max-height:70vh } }
+</style>
+
+</head>
+<body>
+<header class="app" id="hdr"></header>
+<main id="view"></main>
+
+<script>
+"use strict";
+/* ======================================================================
+   J17 Stat Book · Practice prototype 2: a spreadsheet that knows basketball.
+   Players down the side, drills (columns) across the top, free text in every
+   cell, exactly as you'd type it in a sheet. On top of the sheet:
+   - every entry is read for numbers and units without needing to know what
+     the drill means ("78 in 42.33s", "8 right, 6 left", "7/10", "N/A", "(lost ball)")
+   - columns are matched by name across practices, so every cell knows the
+     player's last value and best in that column
+   - a big entry bar (Enter = next player), a stopwatch and a countdown
+   - every keystroke saves; Undo; exports and a sheet import
+   ====================================================================== */
+var KEY = "j17.statbook.practice-proto2", UIKEY = KEY + ".ui";
+var DEFAULT_SCALE = ["Beginner", "Developing", "Intermediate", "Advanced", "Elite"];
+
+function uid(){ return Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
+function norm(s){ return String(s == null ? "" : s).toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[\s\-_.\/]+/g, " ").trim(); }
+function today(){ var d = new Date(); return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0"); }
+function daysAgo(n){ var d = new Date(Date.now() - n * 864e5); return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0"); }
+function h(tag, a, kids){
+  var e = document.createElement(tag);
+  if(a) Object.keys(a).forEach(function(k){
+    var v = a[k]; if(v === null || v === undefined || v === false) return;
+    if(k === "class") e.className = v; else if(k === "text") e.textContent = v;
+    else if(k === "value") e.value = v; else if(k === "style") e.style.cssText = v;
+    else if(k.slice(0, 2) === "on") e.addEventListener(k.slice(2), v);
+    else e.setAttribute(k, v === true ? "" : v);
+  });
+  (kids || []).forEach(function(c){ if(c === null || c === undefined || c === false) return; e.appendChild(typeof c === "string" ? document.createTextNode(c) : c); });
+  return e;
+}
+function fmt(n){ var r = Math.round(n * 100) / 100; return String(r); }
+
+/* ---------------- reading an entry, whatever it means ----------------
+   Keeps the text as typed and pulls out: numbers with a unit or a side ("42.33s", "8 right"),
+   "of N" ("7/10", "7 of 10"), mixed fractions ("19 1/3"), clock times ("1:05.3"), a level word,
+   "not done" (N/A, DNP, absent, out, injured, -), and anything in brackets as a note.
+   A count with a time gives a rate per second. */
+var UNITS = { s: "s", sec: "s", secs: "s", second: "s", seconds: "s", min: "min", mins: "min", minute: "min", minutes: "min",
+  ft: "ft", feet: "ft", foot: "ft", inch: "in", inches: "in", cm: "cm", m: "m", lb: "lb", lbs: "lb", kg: "kg",
+  r: "right", right: "right", rt: "right", l: "left", left: "left", lt: "left", rh: "right", lh: "left", pts: "pts", points: "pts" };
+var JOIN = { "in": 1, "and": 1, "x": 1, "for": 1, "at": 1, "to": 1, "then": 1, "with": 1, "on": 1, "after": 1 };
+function parse(text){
+  var out = { nums: [], level: "", status: "", note: "", rate: null };
+  var t = String(text == null ? "" : text).trim(); if(!t) return out;
+  if(/^(n\/?a|dnp|did ?not|didn'?t|absent|out|inj(ured)?|sick|away|-+|—|–)$/i.test(t)){ out.status = "not done"; return out; }
+  var notes = [];
+  t = t.replace(/\(([^)]*)\)?/g, function(m, x){ if(x.trim()) notes.push(x.trim()); return " ; "; });
+  out.note = notes.join("; ");
+  var toks = t.match(/\d+:\d{1,2}(?:\.\d+)?|\d+(?:\.\d+)?\/\d+(?:\.\d+)?|\d*\.\d+|\d+|%|"|'|[A-Za-z][A-Za-z']*|;/g) || [];
+  var levelOf = function(w){ var lw = w.toLowerCase(); for(var i = 0; i < DB.scale.length; i++){ var s = DB.scale[i].toLowerCase(); if(lw === s || lw === s.slice(0, 3) || (s === "elite" && lw === "elt")) return DB.scale[i]; } return ""; };
+  for(var i = 0; i < toks.length; i++){
+    var k = toks[i], n = null;
+    if(/^\d+:\d/.test(k)){ var a = k.split(":"); n = { v: parseInt(a[0], 10) * 60 + parseFloat(a[1]), u: "s" }; }
+    else if(/\//.test(k)){
+      var f = k.split("/"), x = parseFloat(f[0]), y = parseFloat(f[1]), last = out.nums[out.nums.length - 1];
+      if(last && !last.u && !last.of && x < y && i > 0 && /^\d+$/.test(toks[i - 1]) && /^\d+$/.test(f[0])){ last.v = last.v + x / y; continue; }   // 19 1/3
+      n = { v: x, of: y };
+    }
+    else if(/^\d|^\./.test(k)) n = { v: parseFloat(k) };
+    else if(k !== ";" && !out.level){ var lv = levelOf(k); if(lv) out.level = lv; }
+    if(!n) continue;
+    var nx = toks[i + 1], nl = nx ? nx.toLowerCase() : "";
+    if(nx === "%"){ n.u = "%"; i++; }
+    else if(nx === '"'){ n.u = "in"; i++; }
+    else if(nx === "'"){ n.u = "ft"; i++; }
+    else if(nl === "of" && toks[i + 2] && /^\d/.test(toks[i + 2])){ n.of = parseFloat(toks[i + 2]); i += 2; }
+    else if(nl === "out" && (toks[i + 2] || "").toLowerCase() === "of" && toks[i + 3] && /^\d/.test(toks[i + 3])){ n.of = parseFloat(toks[i + 3]); i += 3; }
+    else if(nx && /^[a-z]/i.test(nx) && !(JOIN[nl] && toks[i + 2] && /^\d/.test(toks[i + 2])) && !levelOf(nx)){ n.u = UNITS[nl] || nl; i++; }
+    out.nums.push(n);
+  }
+  var times = out.nums.filter(function(x){ return x.u === "s"; }), counts = out.nums.filter(function(x){ return !x.u && !x.of; });
+  if(times.length === 1 && counts.length >= 1 && times[0].v > 0) out.rate = counts[0].v / times[0].v;
+  return out;
+}
+function numText(x){ return fmt(x.v) + (x.of ? "/" + fmt(x.of) : "") + (x.u ? (x.u === "%" ? "%" : " " + x.u) : ""); }
+function readText(r){
+  if(r.status) return "not done";
+  var parts = r.nums.map(numText);
+  if(r.rate !== null) parts.push(fmt(r.rate) + "/s");
+  if(r.level) parts.push(r.level);
+  if(r.note) parts.push("note: " + r.note);
+  return parts.join(" · ");
+}
+/* the number a cell is compared on: a % for "of N", else the first plain count, else the first number */
+function primary(r){
+  if(!r || r.status) return null;
+  var of = r.nums.filter(function(x){ return x.of; })[0]; if(of) return { v: of.v / of.of * 100, u: "%" };
+  var c = r.nums.filter(function(x){ return !x.u; })[0]; if(c) return { v: c.v, u: "" };
+  var any = r.nums[0]; return any ? { v: any.v, u: any.u } : null;
+}
+
+/* ---------------- demo data: invented players, last week's sheet ---------------- */
+function demo(){
+  var players = [["Avery", "3"], ["Blake", "5"], ["Casey", "7"], ["Dakota", "8"], ["Emerson", "10"], ["Finley", "11"],
+    ["Harper", "12"], ["Jordan", "14"], ["Kai", "21"], ["Logan", "23"], ["Morgan", "24"], ["Quinn", "30"]]
+    .map(function(p){ return { id: uid(), name: p[0], num: p[1], nick: "" }; });
+  var cols = ["Pound dribble R", "Pound dribble L", "BTL 30s", "Crossover", "3 pylon in 30s"].map(function(n){ return { id: uid(), name: n }; });
+  var vals = [["72", "59", "19 in 30s", "56", "8 right, 6 left"], ["63", "77", "27 in 22.58s (lost ball)", "77", "10 right, 10 left"], ["85", "67", "N/A", "61", "7 right, 5 left"],
+    ["90", "81", "31 in 30s", "70", "9 right, 8 left"], ["58", "44", "15 in 30s", "48", "6 right, 4 left"], ["", "", "", "", ""]];
+  var cells = {}; cols.forEach(function(c){ cells[c.id] = {}; });
+  vals.forEach(function(row, i){ row.forEach(function(v, j){ if(v) cells[cols[j].id][players[i].id] = { text: v, upd: Date.now() - 7 * 864e5 }; }); });
+  var past = { id: uid(), t: String(Date.now() - 7 * 864e5), date: daysAgo(7), title: "Ball handling", playerIds: players.slice(0, 10).map(function(p){ return p.id; }), cols: cols, cells: cells };
+  return { v: 2, scale: DEFAULT_SCALE.slice(), players: players, practices: [past], better: {}, cur: null };
+}
+
+/* ---------------- storage: every keystroke saves ---------------- */
+var DB, UI, saveFailed = false;
+function load(){
+  try { var d = JSON.parse(localStorage.getItem(KEY) || "null"); if(d && d.v === 2 && Array.isArray(d.players) && Array.isArray(d.practices)) DB = d; } catch(e) {}
+  if(!DB) DB = demo();
+  if(!Array.isArray(DB.scale) || DB.scale.length !== 5) DB.scale = DEFAULT_SCALE.slice();
+  if(!DB.better) DB.better = {};
+  DB.practices.forEach(fixPractice);
+  try { UI = JSON.parse(localStorage.getItem(UIKEY) || "null"); } catch(e) {}
+  UI = Object.assign({ view: DB.cur ? "sheet" : "home", sel: null, sort: "order", q: "", panel: null, colQ: "", rowQ: "", histPid: null, histQ: "", np: null, undo: [], setTab: "players" }, UI || {});
+  if(!Array.isArray(UI.undo)) UI.undo = [];
+}
+function fixPractice(p){ if(!Array.isArray(p.playerIds)) p.playerIds = []; if(!Array.isArray(p.cols)) p.cols = []; if(!p.cells) p.cells = {}; p.cols.forEach(function(c){ if(!p.cells[c.id]) p.cells[c.id] = {}; }); }
+function save(){
+  try { localStorage.setItem(KEY, JSON.stringify(DB)); localStorage.setItem(UIKEY, JSON.stringify(UI)); saveFailed = false; }
+  catch(e){ saveFailed = true; }
+  var s = document.getElementById("stamp");
+  if(s){ s.textContent = saveFailed ? "NOT SAVED: export a backup now" : "Saved " + new Date().toLocaleTimeString([], { hour: "numeric", minute: "2-digit", second: "2-digit" }); s.className = saveFailed ? "bad" : ""; }
+}
+function saveUI(){ try { localStorage.setItem(UIKEY, JSON.stringify(UI)); } catch(e) {} }
+
+/* ---------------- lookups ---------------- */
+function player(id){ return DB.players.filter(function(p){ return p.id === id; })[0] || null; }
+function practice(){ return DB.practices.filter(function(p){ return p.id === DB.cur; })[0] || null; }
+function pname(id){ var p = player(id); return p ? p.name : "?"; }
+function plabel(p){ return p.name + (p.num ? " #" + p.num : ""); }
+function byName(a, b){ return norm(a.name).localeCompare(norm(b.name)); }
+function col(p, id){ return p.cols.filter(function(c){ return c.id === id; })[0] || null; }
+function cellText(p, colId, pid){ var c = p.cells[colId] && p.cells[colId][pid]; return c ? c.text : ""; }
+function byDate(a, b){ return (a.date + a.t).localeCompare(b.date + b.t); }
+function matchPlayers(list, q){
+  var t = norm(q).replace(/^#/, ""); if(!t) return list.slice();
+  return list.filter(function(p){ return norm(p.name).indexOf(t) > -1 || norm(p.nick).indexOf(t) > -1 || String(p.num || "") === t; });
+}
+/* which way is better for a column (by name, across practices); auto: times lower, everything else higher */
+function betterOf(name, sample){
+  var b = DB.better[norm(name)]; if(b) return b;
+  return sample && sample.u === "s" ? "lower" : "higher";
+}
+/* the same column in earlier practices, for this player: [{date, text, read}] oldest first */
+function history(name, pid, before){
+  var key = norm(name), out = [];
+  DB.practices.slice().sort(byDate).forEach(function(p){
+    if(before && (p.date + p.t) >= (before.date + before.t)) return;
+    p.cols.forEach(function(c){ if(norm(c.name) !== key) return; var t = cellText(p, c.id, pid); if(t) out.push({ date: p.date, practice: p.title, text: t, read: parse(t) }); });
+  });
+  return out;
+}
+function compare(p, c, pid, r){
+  var cur = primary(r); if(!cur) return null;
+  var past = history(c.name, pid, p).map(function(x){ return primary(x.read); }).filter(function(x){ return x && x.u === cur.u; });
+  if(!past.length) return { first: true };
+  var dir = betterOf(c.name, cur), last = past[past.length - 1], diff = cur.v - last.v;
+  var best = past.reduce(function(m, x){ return dir === "lower" ? Math.min(m, x.v) : Math.max(m, x.v); }, dir === "lower" ? Infinity : -Infinity);
+  var pb = dir === "lower" ? cur.v < best : cur.v > best;
+  var good = diff === 0 ? 0 : ((diff > 0) === (dir !== "lower") ? 1 : -1);
+  return { diff: diff, u: cur.u, good: good, pb: pb };
+}
+
+/* ---------------- render, keeping focus where it was ---------------- */
+function render(){
+  var a = document.activeElement, fid = a && a.id, s0 = null, s1 = null;
+  try { if(fid && a.selectionStart !== undefined){ s0 = a.selectionStart; s1 = a.selectionEnd; } } catch(e) {}
+  var box = document.querySelector(".tablebox"), sx = box ? box.scrollLeft : 0, sy = box ? box.scrollTop : 0;
+  renderHeader();
+  var v = document.getElementById("view"); v.innerHTML = "";
+  if(UI.view === "sheet" && !practice()) UI.view = "home";
+  ({ home: viewHome, plan: viewPlan, sheet: viewSheet, players: viewPlayers, setup: viewSetup, data: viewData }[UI.view] || viewHome)(v);
+  var nb = document.querySelector(".tablebox"); if(nb && box){ nb.scrollLeft = sx; nb.scrollTop = sy; }
+  if(fid){ var b = document.getElementById(fid); if(b){ b.focus({ preventScroll: true }); try { if(s0 !== null) b.setSelectionRange(s0, s1); } catch(e) {} } }
+  saveUI();
+}
+function go(view){ UI.view = view; UI.panel = null; render(); window.scrollTo(0, 0); }
+function renderHeader(){
+  var hd = document.getElementById("hdr"); hd.innerHTML = "";
+  var p = practice();
+  hd.appendChild(h("div", { class: "brand" }, ["Practice", h("small", { text: "Stat Book prototype 2" })]));
+  if(p) hd.appendChild(h("span", { class: "muted small", text: (p.title || "Practice") + " · " + p.date }));
+  hd.appendChild(h("span", { id: "stamp", text: saveFailed ? "NOT SAVED: export a backup now" : "", class: saveFailed ? "bad" : "" }));
+  var nav = h("nav");
+  var b = function(view, label){ nav.appendChild(h("button", { "aria-pressed": UI.view === view || (view === "home" && UI.view === "plan") ? "true" : "false", onclick: function(){ go(view); } }, [label])); };
+  if(p) b("sheet", "Sheet");
+  b("home", "Practices"); b("players", "Players"); b("setup", "Setup"); b("data", "Data");
+  hd.appendChild(nav);
+  document.documentElement.style.setProperty("--hh", hd.offsetHeight + "px");
+}
+var armedKey = null, armedTimer = null;
+function twoTap(key, label, armedLabel, fn, cls){
+  var on = armedKey === key;
+  return h("button", { class: (cls || "danger") + (on ? " armed" : ""), onclick: function(){
+    if(armedKey === key){ armedKey = null; clearTimeout(armedTimer); fn(); return; }
+    armedKey = key; clearTimeout(armedTimer); armedTimer = setTimeout(function(){ armedKey = null; render(); }, 4000); render(); } }, [on ? armedLabel : label]);
+}
+function flash(msg){ var v = document.getElementById("view"); v.insertBefore(h("p", { class: "banner", role: "status", text: msg }), v.firstChild); }
+
+/* ======================= PRACTICES ======================= */
+function viewHome(v){
+  var w = h("div", { class: "wrap" }); v.appendChild(w);
+  if(saveFailed) w.appendChild(h("p", { class: "banner", text: "This device couldn't save. Go to Data and export a backup now." }));
+  w.appendChild(h("div", { class: "row", style: "justify-content:space-between;margin-bottom:12px" }, [
+    h("h1", { text: "Practices", style: "margin:0" }),
+    h("button", { class: "primary", onclick: function(){
+      var last = DB.practices.slice().sort(byDate).pop();
+      UI.np = { title: "", date: today(), pids: (last ? last.playerIds : DB.players.map(function(p){ return p.id; })).slice(), copy: !!last, q: "" }; go("plan"); } }, ["New practice"])]));
+  var list = DB.practices.slice().sort(byDate).reverse();
+  if(!list.length) w.appendChild(h("div", { class: "hint", text: "No practices yet." }));
+  list.forEach(function(p){
+    var n = 0; p.cols.forEach(function(c){ n += Object.keys(p.cells[c.id] || {}).length; });
+    w.appendChild(h("div", { class: "card row", style: "margin-bottom:8px" }, [
+      h("div", { class: "grow" }, [h("b", { text: (p.title || "Practice") + " · " + p.date }), h("div", { class: "muted small", text: p.playerIds.length + " players · " + p.cols.length + " columns · " + n + " entries" })]),
+      h("button", { class: DB.cur === p.id ? "primary" : "", onclick: function(){ DB.cur = p.id; UI.sel = null; save(); go("sheet"); } }, [DB.cur === p.id ? "Continue" : "Open"]),
+      twoTap("delp" + p.id, "Delete", "Tap again to delete", function(){ DB.practices = DB.practices.filter(function(x){ return x !== p; }); if(DB.cur === p.id) DB.cur = null; save(); render(); })]));
+  });
+}
+function viewPlan(v){
+  var n = UI.np; if(!n){ go("home"); return; }
+  var last = DB.practices.slice().sort(byDate).pop();
+  var w = h("div", { class: "wrap" }); v.appendChild(w);
+  w.appendChild(h("h1", { text: "New practice", style: "margin:0 0 10px" }));
+  var c = h("div", { class: "card" }); w.appendChild(c);
+  c.appendChild(h("div", { class: "row" }, [
+    h("div", { class: "grow" }, [h("label", { class: "f", text: "Name" }), h("input", { id: "npTitle", value: n.title, placeholder: "e.g. Ball handling", oninput: function(e){ n.title = e.target.value; saveUI(); } })]),
+    h("div", { style: "flex:0 0 200px" }, [h("label", { class: "f", text: "Date" }), h("input", { id: "npDate", type: "date", value: n.date, oninput: function(e){ n.date = e.target.value; saveUI(); } })])]));
+  if(last) c.appendChild(h("label", { class: "row", style: "margin-top:12px" }, [
+    h("input", { type: "checkbox", style: "width:22px;min-height:22px", checked: n.copy ? "checked" : null, onchange: function(e){ n.copy = e.target.checked; saveUI(); } }),
+    h("span", { text: "Start with the same columns as the last practice (" + last.cols.map(function(x){ return x.name; }).join(", ") + ")" })]));
+  c.appendChild(h("label", { class: "f", text: "Who's here (" + n.pids.length + ")" }));
+  c.appendChild(h("div", { class: "row" }, [h("input", { id: "npQ", value: n.q, placeholder: "Search", style: "flex:1 1 200px", oninput: function(e){ n.q = e.target.value; render(); } }),
+    h("button", { onclick: function(){ n.pids = DB.players.map(function(p){ return p.id; }); render(); } }, ["Everyone"]), h("button", { onclick: function(){ n.pids = []; render(); } }, ["No one"])]));
+  var pr = h("div", { class: "row", style: "margin-top:8px" }); c.appendChild(pr);
+  matchPlayers(DB.players.slice().sort(byName), n.q).forEach(function(p){ var on = n.pids.indexOf(p.id) > -1;
+    pr.appendChild(h("button", { class: "chip", "aria-pressed": on ? "true" : "false", onclick: function(){ if(on) n.pids = n.pids.filter(function(x){ return x !== p.id; }); else n.pids.push(p.id); render(); } }, [plabel(p)])); });
+  w.appendChild(h("div", { class: "row", style: "margin-top:12px" }, [
+    h("button", { class: "primary", onclick: function(){
+      var ids = DB.players.filter(function(p){ return n.pids.indexOf(p.id) > -1; }).sort(byName).map(function(p){ return p.id; });
+      var cols = n.copy && last ? last.cols.map(function(x){ return { id: uid(), name: x.name }; }) : [];
+      var p = { id: uid(), t: String(Date.now()), date: n.date || today(), title: n.title.trim() || "Practice", playerIds: ids, cols: cols, cells: {} };
+      fixPractice(p); DB.practices.push(p); DB.cur = p.id; UI.np = null; UI.undo = [];
+      UI.sel = ids.length && cols.length ? { pid: ids[0], colId: cols[0].id } : null; save(); go("sheet"); focusEntry(); } }, ["Open the sheet"]),
+    h("button", { onclick: function(){ UI.np = null; go("home"); } }, ["Cancel"])]));
+}
+
+/* ======================= THE SHEET ======================= */
+function rows(p){
+  var ids = p.playerIds.slice(), list = ids.map(player).filter(Boolean), pos = {}; ids.forEach(function(id, i){ pos[id] = i; });
+  if(UI.sort === "az") list.sort(byName);
+  else if(UI.sort === "num") list.sort(function(a, b){ return (parseInt(a.num, 10) || 999) - (parseInt(b.num, 10) || 999) || byName(a, b); });
+  else if(UI.sort && UI.sort.indexOf("col:") === 0){
+    var c = col(p, UI.sort.slice(4));
+    if(c){ var dir = null; list.sort(function(a, b){
+      var x = primary(parse(cellText(p, c.id, a.id))), y = primary(parse(cellText(p, c.id, b.id)));
+      if(!x && !y) return pos[a.id] - pos[b.id]; if(!x) return 1; if(!y) return -1;
+      dir = dir || betterOf(c.name, x); return dir === "lower" ? x.v - y.v : y.v - x.v; }); }
+  } else list.sort(function(a, b){ return pos[a.id] - pos[b.id]; });
+  if(UI.rowQ){ var ok = matchPlayers(list, UI.rowQ).map(function(x){ return x.id; }); list = list.filter(function(x){ return ok.indexOf(x.id) > -1; }); }
+  return list;
+}
+function viewSheet(v){
+  var p = practice(), wrap = h("div", { class: "sheetview" }); v.appendChild(wrap);
+  if(UI.sel && (!col(p, UI.sel.colId) || p.playerIds.indexOf(UI.sel.pid) < 0)) UI.sel = null;
+  wrap.appendChild(entryBar(p));
+  if(UI.panel) wrap.appendChild(panel(p));
+  var box = h("div", { class: "tablebox" }); wrap.appendChild(box);
+  var t = h("table", { class: "sheet" }); box.appendChild(t);
+  var head = h("tr", {}, [h("th", { class: "pcell" }, [h("div", { style: "width:170px;padding:6px 8px" }, [
+    h("input", { id: "rowQ", value: UI.rowQ, placeholder: "Find player", "aria-label": "Find a player", style: "min-height:36px;padding:6px 8px;font-size:14px", oninput: function(e){ UI.rowQ = e.target.value; render(); } })])])]);
+  p.cols.forEach(function(c){
+    head.appendChild(h("th", {}, [h("div", { class: "colh" }, [
+      h("button", { "aria-pressed": UI.sel && UI.sel.colId === c.id ? "true" : "false", onclick: function(){ var r = rows(p); UI.sel = { pid: (UI.sel && UI.sel.pid) || (r[0] && r[0].id), colId: c.id }; render(); focusEntry(); } }, [c.name + (UI.sort === "col:" + c.id ? " ↓" : "")]),
+      h("button", { class: "menu", "aria-label": "Column options for " + c.name, onclick: function(){ UI.panel = UI.panel && UI.panel.col === c.id ? null : { kind: "col", col: c.id }; render(); } }, ["⋯"])])]));
+  });
+  head.appendChild(h("th", { class: "addcol" }, [h("button", { onclick: function(){ UI.panel = { kind: "addcol" }; UI.colQ = ""; render(); var i = document.getElementById("colName"); if(i) i.focus(); } }, ["＋ Column"])]));
+  t.appendChild(h("thead", {}, [head]));
+  var body = h("tbody"); t.appendChild(body);
+  var list = rows(p);
+  list.forEach(function(pl){
+    var tr = h("tr", { class: UI.sel && UI.sel.pid === pl.id ? "rowon" : "" });
+    tr.appendChild(h("td", { class: "pcell" }, [h("button", { class: "pbtn", onclick: function(){ UI.histPid = pl.id; UI.histFrom = "sheet"; go("players"); } }, [h("b", { text: pl.name }), h("span", { text: pl.num ? "#" + pl.num : "" })])]));
+    p.cols.forEach(function(c){
+      var txt = cellText(p, c.id, pl.id), r = parse(txt), on = UI.sel && UI.sel.pid === pl.id && UI.sel.colId === c.id;
+      var cmp = txt ? compare(p, c, pl.id, r) : null, read = txt ? readText(r) : "";
+      var marks = [];
+      if(cmp && !cmp.first && cmp.diff !== 0) marks.push(h("span", { class: cmp.good > 0 ? "up" : cmp.good < 0 ? "down" : "" , text: (cmp.diff > 0 ? "+" : "−") + fmt(Math.abs(cmp.diff)) + (cmp.u === "%" ? "%" : cmp.u ? " " + cmp.u : "") + " " }));
+      if(cmp && cmp.pb) marks.push(h("span", { class: "pb", text: "★ best " }));
+      var rd = h("span", { class: "rd" }, marks.concat([read && read !== txt ? read : ""]));
+      tr.appendChild(h("td", { class: on ? "on" : "" }, [h("button", { class: "cell" + (r.status ? " na" : ""), "data-pid": pl.id, "data-col": c.id, "aria-label": pl.name + ", " + c.name + (txt ? ": " + txt : ": empty"),
+        onclick: function(){ UI.sel = { pid: pl.id, colId: c.id }; UI.panel = UI.panel && UI.panel.kind === "addcol" ? null : UI.panel; render(); focusEntry(); } }, [h("span", { class: "tx", text: txt }), txt ? rd : null])]));
+    });
+    tr.appendChild(h("td", {}));
+    body.appendChild(tr);
+  });
+  body.appendChild(h("tr", {}, [h("td", { class: "pcell addrow" }, [h("button", { class: "pbtn", style: "min-height:48px;color:var(--accent);font-weight:700", onclick: function(){ UI.panel = { kind: "addrow" }; UI.addQ = ""; render(); var i = document.getElementById("addQ"); if(i) i.focus(); } }, ["＋ Player"])])]));
+  if(!p.cols.length) box.appendChild(h("div", { class: "hint", style: "margin:12px", text: "Add a column for each drill you run: tap ＋ Column and type its name." }));
+  if(UI.sel){ setTimeout(function(){ var c = document.querySelector('td.on'); if(c && c.scrollIntoView) c.scrollIntoView({ block: "nearest", inline: "nearest" }); }, 0); }
+}
+function focusEntry(){ var i = document.getElementById("cellIn"); if(i){ i.focus(); try { var n = i.value.length; i.setSelectionRange(n, n); } catch(e) {} } }
+
+/* ---- the entry bar ---- */
+var sw = { on: false, start: 0, timer: null }, cd = { on: false, end: 0, timer: null, secs: 0 }, audio = null;
+function entryBar(p){
+  var bar = h("div", { class: "bar" });
+  if(!UI.sel){
+    bar.appendChild(h("div", { class: "muted", text: p.cols.length ? "Tap a cell to enter a result. Type it the way you would in a spreadsheet: “78 in 42.33s”, “8 right, 6 left”, “7/10”, “N/A”, (notes in brackets)." : "Start with ＋ Column on the right of the sheet." }));
+    bar.appendChild(timers(p));
+    return bar;
+  }
+  var c = col(p, UI.sel.colId), pl = player(UI.sel.pid), txt = cellText(p, c.id, pl.id), r = parse(txt);
+  var cmp = txt ? compare(p, c, pl.id, r) : null, hist = history(c.name, pl.id, p);
+  bar.appendChild(h("div", { class: "row" }, [h("span", { class: "where", text: plabel(pl) }), h("span", { class: "muted", text: "·" }), h("span", { class: "where", text: c.name }),
+    hist.length ? h("span", { class: "muted small", text: "· last time (" + hist[hist.length - 1].date + "): " + hist[hist.length - 1].text }) : h("span", { class: "muted small", text: "· first time in this column" })]));
+  var input = h("input", { id: "cellIn", value: txt, autocomplete: "off", autocapitalize: "off", enterkeyhint: "next", placeholder: "Type a result, or tap the mic on the keyboard", "aria-label": "Result for " + pl.name + " in " + c.name,
+    oninput: function(e){ setCell(p, c.id, pl.id, e.target.value); var rr = parse(e.target.value), rd = document.getElementById("readout"); if(rd) rd.textContent = e.target.value ? "Reads as: " + (readText(rr) || "text only (kept as written)") : ""; refreshCell(p, c, pl.id); },
+    onkeydown: function(e){
+      if(e.key === "Enter"){ e.preventDefault(); move(p, e.shiftKey ? -1 : 1, 0); }
+      else if(e.key === "Tab"){ e.preventDefault(); move(p, 0, e.shiftKey ? -1 : 1); } } });
+  bar.appendChild(h("div", { class: "entry" }, [input,
+    h("button", { "aria-label": "Previous player", onclick: function(){ move(p, -1, 0); } }, ["↑"]),
+    h("button", { class: "primary", onclick: function(){ move(p, 1, 0); } }, ["Next ↓"]),
+    h("button", { "aria-label": "Next column", onclick: function(){ move(p, 0, 1); } }, ["→"])]));
+  bar.appendChild(h("div", { class: "read", id: "readout", text: txt ? "Reads as: " + (readText(r) || "text only (kept as written)") : "" }));
+  var tools = timers(p);
+  tools.insertBefore(h("button", { onclick: function(){ setCell(p, c.id, pl.id, "N/A"); move(p, 1, 0); } }, ["N/A"]), tools.firstChild);
+  tools.appendChild(h("button", { disabled: !UI.undo.length, onclick: undo }, ["Undo" + (UI.undo.length ? " (" + UI.undo.length + ")" : "")]));
+  if(cmp && cmp.pb) tools.appendChild(h("span", { class: "tag", style: "color:var(--gold);font-weight:700", text: "★ personal best in this column" }));
+  bar.appendChild(tools);
+  return bar;
+}
+function timers(p){
+  var tools = h("div", { class: "tools" });
+  tools.appendChild(h("button", { class: sw.on ? "running" : "", onclick: function(){
+    if(sw.on){
+      var s = Math.round((Date.now() - sw.start) / 10) / 100; sw.on = false; clearInterval(sw.timer);
+      if(UI.sel){ var cur = cellText(p, UI.sel.colId, UI.sel.pid).trim(), add = fmt(s) + "s";
+        setCell(p, UI.sel.colId, UI.sel.pid, !cur ? add : /\d$/.test(cur) ? cur + " in " + add : cur + " " + add); }
+      render(); focusEntry();
+    } else { sw.on = true; sw.start = Date.now(); sw.timer = setInterval(function(){ var f = document.getElementById("swFace"); if(f) f.textContent = ((Date.now() - sw.start) / 1000).toFixed(1) + " s"; }, 100); render(); focusEntry(); } } },
+    [sw.on ? "Stop" : "⏱ Stopwatch"]));
+  tools.appendChild(h("span", { class: "swface", id: "swFace", text: sw.on ? ((Date.now() - sw.start) / 1000).toFixed(1) + " s" : "" }));
+  [30, 60].forEach(function(n){
+    tools.appendChild(h("button", { class: cd.on && cd.secs === n ? "running" : "", onclick: function(){ startCountdown(n); } }, [cd.on && cd.secs === n ? "Cancel" : n + " s countdown"])); });
+  tools.appendChild(h("span", { class: "swface", id: "cdFace", text: cd.on ? Math.max(0, Math.ceil((cd.end - Date.now()) / 1000)) + " s left" : "" }));
+  return tools;
+}
+function startCountdown(n){
+  if(cd.on){ cd.on = false; clearInterval(cd.timer); render(); focusEntry(); return; }
+  try { audio = audio || new (window.AudioContext || window.webkitAudioContext)(); if(audio.state === "suspended") audio.resume(); } catch(e) {}
+  cd.on = true; cd.secs = n; cd.end = Date.now() + n * 1000;
+  cd.timer = setInterval(function(){
+    var left = Math.max(0, Math.ceil((cd.end - Date.now()) / 1000)), f = document.getElementById("cdFace"); if(f) f.textContent = left + " s left";
+    if(Date.now() >= cd.end){ cd.on = false; clearInterval(cd.timer); beep(); var g = document.getElementById("cdFace"); if(g) g.textContent = "Time!"; render(); }
+  }, 200);
+  render(); focusEntry();
+}
+function beep(){ try { if(!audio) return; [0, 0.35, 0.7].forEach(function(t0){ var o = audio.createOscillator(), g = audio.createGain(); o.frequency.value = 880; o.connect(g); g.connect(audio.destination);
+  g.gain.setValueAtTime(0.0001, audio.currentTime + t0); g.gain.exponentialRampToValueAtTime(0.4, audio.currentTime + t0 + 0.02); g.gain.exponentialRampToValueAtTime(0.0001, audio.currentTime + t0 + 0.28);
+  o.start(audio.currentTime + t0); o.stop(audio.currentTime + t0 + 0.3); }); } catch(e) {} }
+function setCell(p, colId, pid, text){
+  var cells = p.cells[colId] = p.cells[colId] || {}, prev = cells[pid] ? cells[pid].text : "";
+  if(prev === text) return;
+  var u = UI.undo[UI.undo.length - 1];
+  if(!(u && u.pid === pid && u.colId === colId && u.p === p.id && Date.now() - u.t < 8000)) UI.undo.push({ p: p.id, pid: pid, colId: colId, prev: prev, t: Date.now() });
+  else u.t = Date.now();
+  if(UI.undo.length > 50) UI.undo.shift();
+  if(String(text).trim()) cells[pid] = { text: String(text), upd: Date.now() }; else delete cells[pid];
+  save();
+}
+function undo(){
+  var u = UI.undo.pop(); if(!u) return;
+  var p = DB.practices.filter(function(x){ return x.id === u.p; })[0]; if(!p) return;
+  var cells = p.cells[u.colId] = p.cells[u.colId] || {};
+  if(u.prev) cells[u.pid] = { text: u.prev, upd: Date.now() }; else delete cells[u.pid];
+  DB.cur = p.id; UI.sel = { pid: u.pid, colId: u.colId }; save(); render(); focusEntry();
+}
+function refreshCell(p, c, pid){   // update one cell while typing, without redrawing the sheet
+  var b = document.querySelector('.cell[data-pid="' + pid + '"][data-col="' + c.id + '"]'); if(!b) return;
+  var txt = cellText(p, c.id, pid), r = parse(txt), cmp = txt ? compare(p, c, pid, r) : null, read = txt ? readText(r) : "";
+  b.className = "cell" + (r.status ? " na" : "");
+  b.innerHTML = "";
+  b.appendChild(h("span", { class: "tx", text: txt }));
+  if(txt){ var marks = [];
+    if(cmp && !cmp.first && cmp.diff !== 0) marks.push(h("span", { class: cmp.good > 0 ? "up" : cmp.good < 0 ? "down" : "", text: (cmp.diff > 0 ? "+" : "−") + fmt(Math.abs(cmp.diff)) + (cmp.u === "%" ? "%" : cmp.u ? " " + cmp.u : "") + " " }));
+    if(cmp && cmp.pb) marks.push(h("span", { class: "pb", text: "★ best " }));
+    b.appendChild(h("span", { class: "rd" }, marks.concat([read && read !== txt ? read : ""]))); }
+}
+function move(p, dr, dc){
+  var list = rows(p), ri = list.map(function(x){ return x.id; }).indexOf(UI.sel.pid), ci = p.cols.map(function(x){ return x.id; }).indexOf(UI.sel.colId);
+  if(dr){ ri += dr; if(ri >= list.length){ ri = 0; ci = Math.min(p.cols.length - 1, ci + 1); } if(ri < 0) ri = list.length - 1; }
+  if(dc){ ci += dc; if(ci >= p.cols.length){ ci = 0; ri = Math.min(list.length - 1, ri + 1); } if(ci < 0) ci = p.cols.length - 1; }
+  if(list[ri] && p.cols[ci]) UI.sel = { pid: list[ri].id, colId: p.cols[ci].id };
+  render(); focusEntry();
+}
+
+/* ---- panels: add a column, column options, add a player ---- */
+function usedNames(){   // every column name used before, most recent first
+  var seen = {}, out = [];
+  DB.practices.slice().sort(byDate).reverse().forEach(function(p){ p.cols.forEach(function(c){ var k = norm(c.name); if(!seen[k]){ seen[k] = 1; out.push(c.name); } }); });
+  return out;
+}
+function addColumn(p, name){
+  name = String(name || "").trim(); if(!name) return;
+  var c = { id: uid(), name: name.slice(0, 60) }; p.cols.push(c); p.cells[c.id] = {};
+  var r = rows(p); UI.sel = r[0] ? { pid: r[0].id, colId: c.id } : null; UI.panel = null; save(); render(); focusEntry();
+}
+function panel(p){
+  var box = h("div", { class: "panel" }), k = UI.panel.kind;
+  var close = h("button", { class: "ghost", onclick: function(){ UI.panel = null; render(); } }, ["Close"]);
+  if(k === "addcol"){
+    box.appendChild(h("div", { class: "row" }, [h("span", { class: "lbl grow", text: "New column (a drill, a test, notes...)" }), close]));
+    box.appendChild(h("div", { class: "row" }, [
+      h("input", { id: "colName", value: UI.colQ, placeholder: "Name it, or pick one you've used", style: "flex:1 1 240px", oninput: function(e){ UI.colQ = e.target.value; render(); }, onkeydown: function(e){ if(e.key === "Enter") addColumn(p, UI.colQ); } }),
+      h("button", { class: "primary", disabled: !UI.colQ.trim(), onclick: function(){ addColumn(p, UI.colQ); } }, ["Add column"])]));
+    var have = p.cols.map(function(c){ return norm(c.name); }), q = norm(UI.colQ);
+    var sug = usedNames().concat(["Notes"]).filter(function(n, i, a){ return a.indexOf(n) === i && have.indexOf(norm(n)) < 0 && (!q || norm(n).indexOf(q) > -1); }).slice(0, 24);
+    if(sug.length){ var r = h("div", { class: "row" }); sug.forEach(function(n){ r.appendChild(h("button", { class: "chip", onclick: function(){ addColumn(p, n); } }, [n])); }); box.appendChild(r); }
+  } else if(k === "col"){
+    var c = col(p, UI.panel.col); if(!c){ UI.panel = null; return box; }
+    box.appendChild(h("div", { class: "row" }, [h("span", { class: "lbl grow", text: "Column: " + c.name }), close]));
+    box.appendChild(h("div", { class: "row" }, [
+      h("input", { id: "colRename", value: c.name, "aria-label": "Column name", style: "flex:1 1 220px", oninput: function(e){ c.name = e.target.value.slice(0, 60); save(); } }),
+      h("button", { onclick: function(){ var i = p.cols.indexOf(c); if(i > 0){ p.cols.splice(i - 1, 0, p.cols.splice(i, 1)[0]); save(); render(); } } }, ["← Move"]),
+      h("button", { onclick: function(){ var i = p.cols.indexOf(c); if(i < p.cols.length - 1){ p.cols.splice(i + 1, 0, p.cols.splice(i, 1)[0]); save(); render(); } } }, ["Move →"]),
+      h("button", { "aria-pressed": UI.sort === "col:" + c.id ? "true" : "false", onclick: function(){ UI.sort = UI.sort === "col:" + c.id ? "order" : "col:" + c.id; render(); } }, ["Sort players by this"])]));
+    var sample = null; Object.keys(p.cells[c.id] || {}).some(function(pid){ sample = primary(parse(p.cells[c.id][pid].text)); return !!sample; });
+    var dir = betterOf(c.name, sample), set = !!DB.better[norm(c.name)];
+    var br = h("div", { class: "row" }, [h("span", { class: "muted small", text: "Better is:" })]);
+    [["higher", "Higher"], ["lower", "Lower"]].forEach(function(o){ br.appendChild(h("button", { class: "chip", "aria-pressed": dir === o[0] ? "true" : "false", onclick: function(){ DB.better[norm(c.name)] = o[0]; save(); render(); } }, [o[1]])); });
+    br.appendChild(h("span", { class: "muted small", text: set ? "(your choice, for every practice with this column)" : "(guessed: times lower, everything else higher)" }));
+    box.appendChild(br);
+    var filled = Object.keys(p.cells[c.id] || {}).length;
+    box.appendChild(h("div", { class: "row" }, [h("span", { class: "muted small grow", text: filled + " entries in this practice. Columns with the same name in other practices share history." }),
+      twoTap("delc" + c.id, "Remove column", filled ? "Tap again: removes " + filled + " entries" : "Tap again", function(){ p.cols = p.cols.filter(function(x){ return x !== c; }); delete p.cells[c.id]; UI.panel = null; if(UI.sort === "col:" + c.id) UI.sort = "order"; save(); render(); })]));
+  } else if(k === "addrow"){
+    box.appendChild(h("div", { class: "row" }, [h("span", { class: "lbl grow", text: "Add a player to this practice" }), close]));
+    box.appendChild(h("input", { id: "addQ", value: UI.addQ || "", placeholder: "Search, or type a new name like “12 Sam”", oninput: function(e){ UI.addQ = e.target.value; render(); } }));
+    var r2 = h("div", { class: "row" }); box.appendChild(r2);
+    matchPlayers(DB.players.filter(function(x){ return p.playerIds.indexOf(x.id) < 0; }).sort(byName), UI.addQ || "").slice(0, 20).forEach(function(x){
+      r2.appendChild(h("button", { class: "chip", onclick: function(){ p.playerIds.push(x.id); UI.addQ = ""; save(); render(); } }, ["+ " + plabel(x)])); });
+    if((UI.addQ || "").trim()) r2.appendChild(h("button", { class: "chip primary", onclick: function(){ var np = newPlayer(UI.addQ); p.playerIds.push(np.id); UI.addQ = ""; save(); render(); } }, ["New player: " + UI.addQ.trim()]));
+  }
+  return box;
+}
+function newPlayer(line){
+  var l = String(line).trim(), m = l.match(/^#?(\d{1,3})\s+(.+)$/), num = "", name = l;
+  if(m){ num = m[1]; name = m[2]; } else { m = l.match(/^(.+?)\s*#(\d{1,3})$/); if(m){ name = m[1]; num = m[2]; } }
+  var p = { id: uid(), name: name.trim().slice(0, 60), num: num, nick: "" }; DB.players.push(p); return p;
+}
+
+/* ======================= PLAYERS: everything a player has done ======================= */
+function viewPlayers(v){
+  var w = h("div", { class: "wrap grid2" }); v.appendChild(w);
+  var left = h("div", { class: "list" }), right = h("div"); w.appendChild(left); w.appendChild(right);
+  left.appendChild(h("input", { id: "hq", value: UI.histQ, placeholder: "Search players", oninput: function(e){ UI.histQ = e.target.value; render(); } }));
+  matchPlayers(DB.players.slice().sort(byName), UI.histQ).forEach(function(pl){
+    left.appendChild(h("button", { class: "item", "aria-pressed": UI.histPid === pl.id ? "true" : "false", onclick: function(){ UI.histPid = pl.id; render(); } }, [plabel(pl)])); });
+  var pl = UI.histPid ? player(UI.histPid) : null;
+  if(!pl){ right.appendChild(h("div", { class: "hint", text: "Pick a player to see every column they've been in, practice by practice, with their best and how they've moved." })); return; }
+  var p = practice();
+  right.appendChild(h("div", { class: "row", style: "justify-content:space-between;margin-bottom:10px" }, [h("h1", { text: plabel(pl), style: "margin:0" }),
+    UI.histFrom === "sheet" && p ? h("button", { onclick: function(){ UI.histFrom = null; go("sheet"); } }, ["← Back to the sheet"]) : null,
+    p && p.playerIds.indexOf(pl.id) > -1 ? twoTap("rm" + pl.id, "Not here today", "Tap again: take off this practice", function(){ p.playerIds = p.playerIds.filter(function(x){ return x !== pl.id; }); save(); render(); }) : null]));
+  var byCol = {}, order = [];
+  DB.practices.slice().sort(byDate).forEach(function(px){ px.cols.forEach(function(c){ var t = cellText(px, c.id, pl.id); if(!t) return; var k = norm(c.name);
+    if(!byCol[k]){ byCol[k] = { name: c.name, rows: [] }; order.push(k); } byCol[k].rows.push({ date: px.date, practice: px.title, text: t, read: parse(t) }); }); });
+  if(!order.length){ right.appendChild(h("div", { class: "hint", text: "Nothing recorded for " + pl.name + " yet." })); return; }
+  order.sort(function(a, b){ return byCol[a].name.localeCompare(byCol[b].name); }).forEach(function(k){
+    var g = byCol[k], prims = g.rows.map(function(x){ return primary(x.read); }), u = (prims.filter(Boolean)[0] || {}).u, dir = betterOf(g.name, prims.filter(Boolean)[0]);
+    var vals = prims.filter(function(x){ return x && x.u === u; }).map(function(x){ return x.v; });
+    var best = vals.length ? (dir === "lower" ? Math.min.apply(null, vals) : Math.max.apply(null, vals)) : null;
+    var card = h("div", { class: "card", style: "margin-bottom:10px" });
+    card.appendChild(h("div", { class: "row", style: "justify-content:space-between" }, [h("b", { text: g.name }),
+      h("span", { class: "muted small", text: (best !== null ? "Best " + fmt(best) + (u === "%" ? "%" : u ? " " + u : "") + " · " : "") + g.rows.length + " practice" + (g.rows.length === 1 ? "" : "s") })]));
+    if(vals.length >= 2) card.appendChild(spark(vals, dir));
+    var tbl = h("table", { class: "t" }, [h("tr", {}, [h("th", { text: "Date" }), h("th", { text: "Practice" }), h("th", { text: "Entry" }), h("th", { text: "Reads as" })])]);
+    g.rows.slice().reverse().forEach(function(x){ tbl.appendChild(h("tr", {}, [h("td", { text: x.date }), h("td", { text: x.practice }), h("td", { text: x.text }), h("td", { class: "muted", text: readText(x.read) })])); });
+    card.appendChild(h("div", { class: "tablewrap" }, [tbl]));
+    right.appendChild(card);
+  });
+}
+function spark(vals, dir){
+  var W = 260, H = 44, lo = Math.min.apply(null, vals), hi = Math.max.apply(null, vals), sp = hi - lo || 1;
+  var pts = vals.map(function(v, i){ return [8 + i * (W - 16) / (vals.length - 1), H - 8 - (v - lo) / sp * (H - 16)]; });
+  var ns = "http://www.w3.org/2000/svg", svg = document.createElementNS(ns, "svg");
+  svg.setAttribute("viewBox", "0 0 " + W + " " + H); svg.setAttribute("width", W); svg.setAttribute("height", H); svg.setAttribute("class", "spark");
+  svg.setAttribute("role", "img"); svg.setAttribute("aria-label", "Trend: " + vals.map(fmt).join(", ") + (dir === "lower" ? " (lower is better)" : ""));
+  var path = document.createElementNS(ns, "polyline"); path.setAttribute("points", pts.map(function(p){ return p.join(","); }).join(" "));
+  path.setAttribute("fill", "none"); path.setAttribute("stroke", "var(--accent)"); path.setAttribute("stroke-width", "2"); svg.appendChild(path);
+  pts.forEach(function(p){ var c = document.createElementNS(ns, "circle"); c.setAttribute("cx", p[0]); c.setAttribute("cy", p[1]); c.setAttribute("r", "3"); c.setAttribute("fill", "var(--accent)"); svg.appendChild(c); });
+  return svg;
+}
+
+/* ======================= SETUP ======================= */
+function viewSetup(v){
+  var w = h("div", { class: "wrap" }); v.appendChild(w);
+  w.appendChild(h("h1", { text: "Setup", style: "margin:0 0 6px" }));
+  var tabs = h("div", { class: "row", style: "margin-bottom:12px" }); w.appendChild(tabs);
+  [["players", "Players"], ["words", "Level words"]].forEach(function(t){ tabs.appendChild(h("button", { "aria-pressed": UI.setTab === t[0] ? "true" : "false", onclick: function(){ UI.setTab = t[0]; render(); } }, [t[1]])); });
+  if(UI.setTab === "words"){
+    var c = h("div", { class: "card", style: "max-width:520px;display:flex;flex-direction:column;gap:8px" }); w.appendChild(c);
+    c.appendChild(h("p", { class: "muted", style: "margin:0", text: "If a cell has one of these words (or its first three letters, like ADV), it's read as a level. Lowest to highest." }));
+    DB.scale.forEach(function(wd, i){ c.appendChild(h("input", { id: "sc" + i, value: wd, "aria-label": "Level " + (i + 1), onchange: function(e){ var x = e.target.value.trim(); if(x) DB.scale[i] = x; save(); render(); } })); });
+    return;
+  }
+  var c2 = h("div", { class: "card", style: "margin-bottom:12px;display:flex;flex-direction:column;gap:8px" }); w.appendChild(c2);
+  c2.appendChild(h("div", { class: "lbl", text: "Add players: one per line, like “12 Sam” or “Sam #12”" }));
+  c2.appendChild(h("textarea", { id: "addMany", rows: "3", placeholder: "12 Sam\nLeo #4" }));
+  c2.appendChild(h("div", { class: "row" }, [
+    h("button", { class: "primary", onclick: function(){ var n = 0; document.getElementById("addMany").value.split(/\n+/).forEach(function(l){ if(l.trim()){ newPlayer(l); n++; } }); save(); render(); flash(n + " added."); } }, ["Add them"]),
+    h("button", { onclick: importStatBook }, ["Import players from a Stat Book backup"])]));
+  var g = h("div", { class: "setgrid" }); w.appendChild(g);
+  DB.players.slice().sort(byName).forEach(function(p){
+    g.appendChild(h("div", { class: "card row" }, [
+      h("input", { id: "pn-" + p.id, value: p.name, "aria-label": "Name", style: "flex:2 1 120px", oninput: function(e){ p.name = e.target.value; save(); } }),
+      h("input", { id: "pj-" + p.id, value: p.num, "aria-label": "Jersey", placeholder: "#", style: "flex:0 0 70px", oninput: function(e){ p.num = e.target.value.replace(/\D/g, "").slice(0, 3); save(); } }),
+      h("input", { id: "pk-" + p.id, value: p.nick, "aria-label": "Nickname", placeholder: "nickname", style: "flex:1 1 90px", oninput: function(e){ p.nick = e.target.value; save(); } })]));
+  });
+}
+function readFile(fn){ var inp = document.createElement("input"); inp.type = "file"; inp.onchange = function(){ var f = inp.files && inp.files[0]; if(!f) return; var rd = new FileReader(); rd.onload = function(){ fn(String(rd.result), f.name); }; rd.readAsText(f); }; inp.click(); }
+function importStatBook(){
+  readFile(function(text){ try { var d = JSON.parse(text), have = {}, n = 0;
+    DB.players.forEach(function(p){ have[norm(p.name) + "#" + (p.num || "")] = 1; });
+    (d.players || []).forEach(function(p){ if(!p || !p.name || p.active === false) return; var k = norm(p.name) + "#" + (p.num || ""); if(have[k]) return;
+      DB.players.push({ id: uid(), name: String(p.name).slice(0, 60), num: String(p.num || "").replace(/\D/g, "").slice(0, 3), nick: (p.aliases && p.aliases[0]) || "" }); have[k] = 1; n++; });
+    save(); render(); flash(n + " player" + (n === 1 ? "" : "s") + " imported."); } catch(e){ render(); flash("That file isn't a Stat Book backup."); } });
+}
+
+/* ======================= DATA: exports, backup, sheet import ======================= */
+function download(name, text, type){
+  try { var b = new Blob([text], { type: type }), a = document.createElement("a"); a.href = URL.createObjectURL(b); a.download = name; document.body.appendChild(a); a.click(); setTimeout(function(){ URL.revokeObjectURL(a.href); a.remove(); }, 500); } catch(e) {}
+}
+function csvCell(v){ v = v === null || v === undefined ? "" : String(v); if(/^[=+\-@]/.test(v) && !/^-?\d/.test(v)) v = " " + v; return /[",\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v; }
+function csv(rows){ return rows.map(function(r){ return r.map(csvCell).join(","); }).join("\n") + "\n"; }
+function sheetCSV(p){   // the sheet as you see it
+  var out = [["Player", "#"].concat(p.cols.map(function(c){ return c.name; }))];
+  rows(p).forEach(function(pl){ out.push([pl.name, pl.num].concat(p.cols.map(function(c){ return cellText(p, c.id, pl.id); }))); });
+  return csv(out);
+}
+function tidyCSV(){   // one row per cell, with what was read from it
+  var out = [["date", "practice", "column", "player", "jersey", "entry", "value_1", "unit_1", "of_1", "value_2", "unit_2", "of_2", "value_3", "unit_3", "of_3", "rate_per_s", "level", "not_done", "note"]];
+  DB.practices.slice().sort(byDate).forEach(function(p){ p.cols.forEach(function(c){ Object.keys(p.cells[c.id] || {}).forEach(function(pid){
+    var t = p.cells[c.id][pid].text, r = parse(t), pl = player(pid), n = r.nums, row = [p.date, p.title, c.name, pl ? pl.name : "?", pl ? pl.num : "", t];
+    for(var i = 0; i < 3; i++) row.push(n[i] ? fmt(n[i].v) : "", n[i] && n[i].u ? n[i].u : "", n[i] && n[i].of ? fmt(n[i].of) : "");
+    row.push(r.rate !== null ? fmt(r.rate) : "", r.level, r.status ? "yes" : "", r.note); out.push(row); }); }); });
+  return csv(out);
+}
+function parseCSV(text){
+  var rows = [], row = [], f = "", q = false;
+  for(var i = 0; i < text.length; i++){ var ch = text[i];
+    if(q){ if(ch === '"'){ if(text[i + 1] === '"'){ f += '"'; i++; } else q = false; } else f += ch; }
+    else if(ch === '"') q = true; else if(ch === ","){ row.push(f); f = ""; } else if(ch === "\n" || ch === "\r"){ if(ch === "\r" && text[i + 1] === "\n") i++; row.push(f); rows.push(row); row = []; f = ""; } else f += ch; }
+  if(f !== "" || row.length){ row.push(f); rows.push(row); }
+  return rows;
+}
+/* a sheet from Numbers, Excel or Google Sheets: first column player names (a "#" column is optional), first row the drill names */
+function importSheet(text, fname){
+  var rs = parseCSV(text.replace(/^﻿/, "")).filter(function(r){ return r.some(function(x){ return String(x).trim(); }); });
+  if(rs.length < 2){ render(); flash("That sheet has no rows to bring in."); return; }
+  var hdr = rs[0].map(function(x){ return String(x).trim(); }), numCol = hdr.findIndex(function(x, i){ return i > 0 && /^(#|no\.?|number|jersey)$/i.test(x); });
+  var p = { id: uid(), t: String(Date.now()), date: today(), title: (fname || "Imported sheet").replace(/\.csv$/i, ""), playerIds: [], cols: [], cells: {} };
+  var colIdx = []; hdr.forEach(function(x, i){ if(i === 0 || i === numCol || !x) return; var c = { id: uid(), name: x.slice(0, 60) }; p.cols.push(c); p.cells[c.id] = {}; colIdx.push([i, c]); });
+  var made = 0, matched = 0;
+  rs.slice(1).forEach(function(r){
+    var name = String(r[0] || "").trim(); if(!name) return;
+    var num = numCol > -1 ? String(r[numCol] || "").replace(/\D/g, "") : "";
+    var pl = DB.players.filter(function(x){ return norm(x.name) === norm(name) || (num && x.num === num && norm(x.name).split(" ")[0] === norm(name).split(" ")[0]); })[0];
+    if(pl) matched++; else { pl = newPlayer((num ? num + " " : "") + name); made++; }
+    if(p.playerIds.indexOf(pl.id) < 0) p.playerIds.push(pl.id);
+    colIdx.forEach(function(ic){ var v = String(r[ic[0]] == null ? "" : r[ic[0]]).trim(); if(v) p.cells[ic[1].id][pl.id] = { text: v, upd: Date.now() }; });
+  });
+  DB.practices.push(p); DB.cur = p.id; UI.sel = null; save(); go("sheet");
+  flash("Brought in " + p.cols.length + " columns for " + p.playerIds.length + " players (" + matched + " matched, " + made + " new). Change the name and date under Practices if needed.");
+}
+function viewData(v){
+  var w = h("div", { class: "wrap" }); v.appendChild(w);
+  w.appendChild(h("h1", { text: "Data", style: "margin:0 0 6px" }));
+  if(saveFailed) w.appendChild(h("p", { class: "banner", text: "This device couldn't save the last change. Export a backup now." }));
+  var size = 0; try { size = (localStorage.getItem(KEY) || "").length; } catch(e) {}
+  w.appendChild(h("p", { class: "muted", text: DB.practices.length + " practices · " + DB.players.length + " players · about " + Math.round(size / 1024) + " KB saved on this device." }));
+  var p = practice(), g = h("div", { class: "setgrid" }); w.appendChild(g);
+  g.appendChild(h("div", { class: "card", style: "display:flex;flex-direction:column;gap:8px" }, [
+    h("div", { class: "lbl", text: "Export" }),
+    h("button", { disabled: !p, onclick: function(){ download("sheet-" + p.date + ".csv", sheetCSV(p), "text/csv"); } }, [p ? "This practice as a sheet (CSV)" : "Open a practice to export its sheet"]),
+    h("button", { class: "primary", onclick: function(){ download("practice-results-" + today() + ".csv", tidyCSV(), "text/csv"); } }, ["All results, one row per entry (CSV)"]),
+    h("button", { onclick: function(){ download("practice-backup-" + today() + ".json", JSON.stringify(DB, null, 1), "application/json"); } }, ["Full backup (JSON)"]),
+    h("p", { class: "muted small", style: "margin:0", text: "The one-row-per-entry CSV has your text plus the numbers, units, rates and levels read from it: ready for analysis." })]));
+  g.appendChild(h("div", { class: "card", style: "display:flex;flex-direction:column;gap:8px" }, [
+    h("div", { class: "lbl", text: "Bring in" }),
+    h("button", { onclick: function(){ readFile(importSheet); } }, ["Import a sheet (CSV) as a practice"]),
+    h("p", { class: "muted small", style: "margin:0", text: "From Numbers, Excel or Google Sheets: player names in the first column, drill names in the first row, results in the cells (a # column is optional)." }),
+    h("button", { onclick: function(){ readFile(function(t){ try { var d = JSON.parse(t); if(!d || d.v !== 2) throw 0; DB = d; DB.practices.forEach(fixPractice); if(!DB.better) DB.better = {}; save(); go("home"); } catch(e){ render(); flash("That isn't a backup from this prototype."); } }); } }, ["Restore a backup (replaces what's here)"]),
+    twoTap("demo", "Load the demo again", "Tap again: replaces everything", function(){ DB = demo(); UI.undo = []; save(); go("home"); }),
+    twoTap("wipe", "Start clean", "Tap again: removes everything", function(){ DB = { v: 2, scale: DEFAULT_SCALE.slice(), players: [], practices: [], better: {}, cur: null }; UI.undo = []; save(); go("home"); })]));
+}
+
+load(); render(); save();
+document.addEventListener("visibilitychange", function(){ if(document.visibilityState === "hidden") save(); });
+</script>
+</body>
+</html>
