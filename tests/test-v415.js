@@ -34,8 +34,7 @@ function files(w) { return { players: w.playersCSV(), sessions: w.sessionsCSV(),
 
 (function() {
   var w = newApp();
-  eq("version", w.APP_VERSION, "4.15");
-  ok("tab title shows it", w.document.title === "J17 Stat Book 4.15", w.document.title);
+  ok("version 4.15 or later (exact version: test-v416.js)", parseFloat(w.APP_VERSION.replace(/^4\./, "")) >= 15, w.APP_VERSION);
 })();
 
 // ---- the files ---------------------------------------------------------------------------

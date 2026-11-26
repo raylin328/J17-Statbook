@@ -120,7 +120,7 @@ tfoot td{font-weight:500;border-top:2px solid var(--line-2);border-bottom:0}
 .tapgrid th:first-child{text-align:left}
 .tapgrid td{padding:0;border:0;text-align:center}
 .tapgrid .nmcell{position:sticky;left:0;z-index:2;background:var(--page);text-align:left;
-  padding:0 6px 0 0;max-width:108px;min-width:84px}
+  padding:0 6px 0 0;max-width:132px;min-width:96px}
 .tapgrid .nmcell b{display:block;font-weight:500;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .tapgrid .nmcell small{display:block;font-size:11px;color:var(--ink-3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .tapgrid .ptscell{font-size:15px;font-weight:500;min-width:40px}
@@ -235,6 +235,17 @@ tfoot td{font-weight:500;border-top:2px solid var(--line-2);border-bottom:0}
 .finder input{ flex:1 1 220px; min-width:0 }
 .bstat{ font-size:12.5px; min-width:3.5em }
 .bstat.ok{ color:#2f7d4f } .bstat.err{ color:#b4471f }
+/* v4.16: drag to rearrange */
+.dh{ display:inline-flex; align-items:center; justify-content:center; min-width:30px; min-height:34px; margin:-4px 2px -4px -6px;
+  color:var(--ink-3); font-size:19px; line-height:1; cursor:grab; touch-action:none; user-select:none; -webkit-user-select:none; vertical-align:middle }
+.dh:active{ cursor:grabbing }
+.dh::before{ content:"\2261" }
+.plr .dh{ position:absolute; top:2px; right:2px; margin:0; min-height:30px }
+.tapgrid .nmcell .dh{ float:left; margin:0 2px 0 -2px; min-width:26px; min-height:40px }   /* beside the name, not above it */
+.plr{ position:relative }
+.dragging{ opacity:.5; outline:2px dashed var(--ink-3); outline-offset:-2px }
+body.dragging-on, body.dragging-on *{ user-select:none !important; -webkit-user-select:none !important }
+.card.pcard-h{ display:flex; align-items:center; gap:6px; margin:-4px 0 6px }
 </style>
 </head>
 <body>
@@ -252,7 +263,7 @@ var OLDKEY = "j17.statbook.v1";
 var SCHEMA = 3;  // v3: typed stats, shot misses/positions, game clock
                  // v4.6 categories are additive to schema 3, NOT a bump: every version
                  // folder shares one localStorage, and older builds refuse newer schemas.
-var APP_VERSION = "4.15";
+var APP_VERSION = "4.16";
 
 /* ---------- state ---------- */
 var S = null;
@@ -1130,13 +1141,15 @@ function player(pid){
 function isOn(d){ return d.active !== false; }
 function activeDrillCount(){ return (S.drills || []).filter(isOn).length; }
 function areaOf(d){ return d.area || "Other"; }
-function drillAreas(list){
-  var out = [], seen = {}, az = !!(S && S.prefs && S.prefs.drillAZ);   // v4.14: A to Z inside each area when asked
-  list.slice().sort(function(a, b){ return az ? String(a.name).toLowerCase().localeCompare(String(b.name).toLowerCase()) : (a.order || 0) - (b.order || 0); }).forEach(function(d){
+function drillAreas(list, byOrder){
+  var out = [], seen = {}, az = !byOrder && !!(S && S.prefs && S.prefs.drillAZ);   // v4.14: A to Z inside each area when asked
+  list.slice().sort(function(a, b){ return (a.order || 0) - (b.order || 0); }).forEach(function(d){
     var a = areaOf(d);
     if(!seen[a]){ seen[a] = []; out.push({ name: a, drills: seen[a] }); }
     seen[a].push(d);
   });
+  // v4.16: areas keep their dragged order; A to Z only sorts the drills inside each one
+  if(az) out.forEach(function(g){ g.drills.sort(function(a, b){ return String(a.name).toLowerCase().localeCompare(String(b.name).toLowerCase()); }); });
   return out;
 }
 function setDrillOn(d, on){
@@ -1495,6 +1508,105 @@ function fmtVal(st, v){
 }
 
 /* ---------- dom helper ---------- */
+/* ---------- v4.16: drag to rearrange ----------
+   A list that can be reordered has data-sortable="<key>" and its items carry data-sid (and data-grp when an
+   item may only move inside its group, like on-court vs bench). Each render registers what to do with the
+   new order in SORTS[key]. Press the ≡ handle, move, let go: the items move as you go, and on release the
+   new order of ids is passed on and saved. A redraw asked for mid-drag waits until you let go, and a tap on a
+   handle never counts as a tap on the item it sits in. */
+var SORTS = {}, DRAG = null, lastDragEnd = 0;
+function sortable(box, key, sel, onDrop){ box.setAttribute("data-sortable", key); SORTS[key] = { sel: sel, onDrop: onDrop }; return box; }
+function dragHandle(label){ return el("span",{cls:"dh",role:"img","aria-label":"Drag to move " + (label || "this"),title:"Drag to move"}); }   // the ≡ is drawn by the stylesheet, so it's not part of the item's text
+function reorderSubset(arr, ids, idOf){
+  idOf = idOf || function(x){ return x; };
+  var want = {}, slots = [], byId = {};
+  ids.forEach(function(id){ want[id] = true; });
+  arr.forEach(function(x, i){ var id = idOf(x); if(want[id]){ slots.push(i); byId[id] = x; } });
+  var items = ids.map(function(id){ return byId[id]; }).filter(function(x){ return x !== undefined; });
+  if(items.length !== slots.length) return arr;
+  var out = arr.slice(); slots.forEach(function(at, k){ out[at] = items[k]; }); return out;
+}
+document.addEventListener("pointerdown", function(e){
+  var hd = e.target && e.target.closest ? e.target.closest(".dh") : null; if(!hd) return;
+  var box = hd.closest("[data-sortable]"), cfg = box && SORTS[box.getAttribute("data-sortable")]; if(!cfg) return;
+  var item = hd.closest(cfg.sel); if(!item || !box.contains(item)) return;
+  e.preventDefault();
+  DRAG = { box: box, cfg: cfg, item: item, grp: item.getAttribute("data-grp"), moved: false, pending: false, top: dragTop() };
+  item.classList.add("dragging"); document.body.classList.add("dragging-on");
+  try { hd.setPointerCapture(e.pointerId); } catch(x) {}
+});
+function dragOver(x, y){   // the item under the finger: move the dragged one next to it (same list, same group)
+  if(!DRAG) return;
+  var under = document.elementFromPoint ? document.elementFromPoint(x, y) : null;
+  var tgt = under && under.closest ? under.closest(DRAG.cfg.sel) : null;
+  if(tgt !== DRAG.last) DRAG.last = null;
+  if(!tgt || tgt === DRAG.item || tgt === DRAG.last || tgt.parentNode !== DRAG.item.parentNode || !tgt.hasAttribute("data-sid")) return;
+  if(tgt.getAttribute("data-grp") !== DRAG.grp) return;   // stay inside its group
+  var sibs = Array.prototype.slice.call(DRAG.item.parentNode.children), a = sibs.indexOf(DRAG.item), b = sibs.indexOf(tgt);
+  DRAG.item.parentNode.insertBefore(DRAG.item, a < b ? tgt.nextSibling : tgt);
+  DRAG.last = tgt;   // rows of different heights: the finger can still be on it after the swap, so it can't swap back until the finger leaves it
+  DRAG.moved = true;
+}
+function dragTop(){   // the scoreboard sticks to the top of the screen: scrolling up starts just under it
+  var b = document.querySelector(".board"); if(!b || !window.getComputedStyle) return 0;
+  var pos = getComputedStyle(b).position, r = b.getBoundingClientRect();
+  return (pos === "sticky" || pos === "fixed") && r.bottom > 0 && r.bottom < window.innerHeight / 2 ? r.bottom : 0;
+}
+function dragScroll(){   // held near the top or bottom edge: keep scrolling, faster the closer to the edge
+  if(!DRAG || DRAG.y == null) return;
+  var edge = 80, y = DRAG.y, h = window.innerHeight, top = DRAG.top || 0, dy = 0;
+  if(y < top + edge) dy = -Math.ceil((top + edge - y) / 4);
+  else if(y > h - edge) dy = Math.ceil((y - (h - edge)) / 4);
+  if(!dy) return;
+  var before = window.scrollY; window.scrollBy(0, dy);
+  if(window.scrollY !== before) dragOver(DRAG.x, DRAG.y);
+}
+document.addEventListener("pointermove", function(e){
+  if(!DRAG) return;
+  e.preventDefault();
+  DRAG.x = e.clientX; DRAG.y = e.clientY;
+  if(!DRAG.timer) DRAG.timer = setInterval(dragScroll, 16);
+  dragOver(e.clientX, e.clientY);
+}, { passive: false });
+function endDrag(){
+  if(!DRAG) return;
+  var d = DRAG; DRAG = null; lastDragEnd = Date.now(); if(d.timer) clearInterval(d.timer);
+  d.item.classList.remove("dragging"); document.body.classList.remove("dragging-on");
+  if(d.moved){
+    var ids = Array.prototype.slice.call(d.box.querySelectorAll(d.cfg.sel)).filter(function(x){ return x.hasAttribute("data-sid"); })
+      .map(function(x){ return x.getAttribute("data-sid"); });
+    d.cfg.onDrop(ids); save();
+  }
+  if(d.moved || d.pending) render();
+}
+document.addEventListener("pointerup", endDrag);
+document.addEventListener("pointercancel", endDrag);
+document.addEventListener("click", function(e){   // a handle is for dragging only, and a drop isn't a tap
+  if((e.target && e.target.closest && e.target.closest(".dh")) || Date.now() - lastDragEnd < 350){ e.stopPropagation(); e.preventDefault(); }
+}, true);
+
+/* what each list does with its new order (also used directly by the tests) */
+function dropGameOrder(sess, ti, ids){ sess.teams[ti].playerIds = reorderSubset(sess.teams[ti].playerIds, ids); }
+function dropPracticeOrder(sess, ids){ sess.playerIds = reorderSubset(sess.playerIds || [], ids); }
+function dropRoster(ids){ S.players = reorderSubset(S.players, ids, function(p){ return p.id; }); }
+function dropStats(ids){ S.stats = reorderSubset(S.stats, ids, function(s){ return s.key; }); }
+function dropCategories(ids){
+  var sorted = catsSorted(), misc = sorted.filter(function(c){ return c.misc; })[0], at = misc ? sorted.indexOf(misc) : -1;
+  var rest = sorted.filter(function(c){ return !c.misc; }).map(function(c){ return c.id; });
+  var list = reorderSubset(rest, ids.filter(function(id){ return rest.indexOf(id) > -1; })).map(catById).filter(Boolean);
+  if(misc) list.splice(Math.min(at, list.length), 0, misc);
+  list.forEach(function(c, i){ c.order = i + 1; });
+}
+function dropDrills(ids){   // inside one area: the same order numbers, handed out in the new sequence
+  var ds = ids.map(drillById).filter(Boolean), nums = ds.map(function(d){ return d.order || 0; }).sort(function(a, b){ return a - b; });
+  ds.forEach(function(d, i){ d.order = nums[i]; });
+}
+function dropAreas(names){
+  var groups = {}; drillAreas(S.drills || [], true).forEach(function(g){ groups[g.name] = g.drills; });
+  var n = 0; names.forEach(function(a){ (groups[a] || []).forEach(function(d){ d.order = ++n; }); delete groups[a]; });
+  Object.keys(groups).forEach(function(a){ groups[a].forEach(function(d){ d.order = ++n; }); });
+}
+
 function el(tag, attrs, kids){
   var e = document.createElement(tag);
   if(attrs) Object.keys(attrs).forEach(function(k){
@@ -1696,6 +1808,7 @@ function renderBoard(){
   ]));
 }
 function render(){
+  if(DRAG){ DRAG.pending = true; return; }   // v4.16: never redraw under a finger that's dragging
   UI._refill = [];   // v4.14: search boxes refill their lists in place instead of redrawing the page
   renderNav(); renderBoard();
   var ov = document.querySelector(".overlay"); if(ov) ov.remove();
@@ -1780,12 +1893,14 @@ function viewGame(v, sess){
   ]));
 
   var ids = courtOrder(sess, UI.team).ids;   // v4.12: on court first
-  var grid = el("div",{cls:"grid"});
+  var grid = sortable(el("div",{cls:"grid"}), "tiles", ".plr", function(ids){ dropGameOrder(sess, UI.team, ids); });   // v4.16
   ids.forEach(function(pid){
     var p = player(pid), m = tot[pid] || {n:0};
     var b = el("button",{cls:"plr " + (UI.team===0?"h":"a") + courtClass(sess, UI.team, pid),
-      "aria-pressed": UI.sel===pid ? "true":"false",
+      "aria-pressed": UI.sel===pid ? "true":"false", "data-sid": pid,
+      "data-grp": isTeamRow(pid) ? "team" : (courtClass(sess, UI.team, pid).trim() || "all"),
       on:{click:function(){ UI.sel = (UI.sel===pid ? null : pid); UI.entry = null; render(); }}});
+    if(!isTeamRow(pid)) b.appendChild(dragHandle(p ? (p.name || jersey(p)) : ""));
     b.appendChild(el("span",{cls:"jn",text:p ? (p.name || jersey(p) || "?") : "?"}));
     var subline = [p && p.name ? jersey(p) : "", p && p.desc].filter(Boolean).join(" · ");
     if(subline) b.appendChild(el("span",{cls:"nm",text:subline}));
@@ -1871,6 +1986,7 @@ function viewTapGrid(v, sess, tot){
   tbl.appendChild(el("thead",{},[hr]));
   var tb = el("tbody");
   var ord = courtOrder(sess, UI.team);
+  sortable(tb, "game", "tr", function(ids){ dropGameOrder(sess, UI.team, ids); });   // v4.16
   ord.ids.forEach(function(pid, ri){
     if(ri === ord.benchAt){   // the stat names again, so they're never far from the row you tap
       var br = el("tr",{cls:"benchhead"});
@@ -1879,8 +1995,10 @@ function viewTapGrid(v, sess, tot){
       tb.appendChild(br);
     }
     var p = player(pid), m = tot[pid] || {n:0, miss:{}};
-    var tr = el("tr",{cls: courtClass(sess, UI.team, pid).trim()});
+    var grp = isTeamRow(pid) ? "team" : (courtClass(sess, UI.team, pid).trim() || "all");
+    var tr = el("tr",{cls: courtClass(sess, UI.team, pid).trim(), "data-sid": pid, "data-grp": grp});
     var nm = el("td",{cls:"nmcell",title:"Tap to edit",on:{click:function(){ UI.editing = pid; UI.adding = null; render(); }}});
+    if(!isTeamRow(pid)) nm.appendChild(dragHandle(p ? (p.name || jersey(p)) : ""));
     var nb = el("b");
     if(p && !p.name && jersey(p)) nb.appendChild(document.createTextNode(jersey(p)));   // unnamed opponent: the number is the name
     else {
@@ -2782,7 +2900,7 @@ function viewPractice(v, sess){
   if(t === "time") v.appendChild(stopwatchCard(st, UI.sel, null));
 
   v.appendChild(pracFinder());
-  var grid = el("div",{cls:"grid"});
+  var grid = sortable(el("div",{cls:"grid"}), "practice", ".plr", function(ids){ dropPracticeOrder(sess, ids); });   // v4.16
   var fillGrid = function(){ grid.innerHTML = "";
   var shown = pracPlayers(sess);
   if(!shown.length) grid.appendChild(el("div",{cls:"sub",text:"No player here matches \u201c" + UI.pq + "\u201d."}));
@@ -2791,8 +2909,9 @@ function viewPractice(v, sess){
     var vals = m[drill];
     var line = isTally(st) ? String(vals || 0)
              : (vals && vals.length ? summarize(st, vals) + " (" + vals.length + ")" : "—");
-    var b = el("button",{cls:"plr p","aria-pressed": UI.sel===pid ? "true":"false",
+    var b = el("button",{cls:"plr p","aria-pressed": UI.sel===pid ? "true":"false", "data-sid": pid,
       on:{click:function(){ UI.sel = (UI.sel===pid ? null : pid); render(); }}});
+    if(canDragPractice()) b.appendChild(dragHandle(p ? p.name : ""));
     b.appendChild(el("span",{cls:"jn",text:p ? p.name : "?"}));
     b.appendChild(el("span",{cls:"ln num",text:line}));
     grid.appendChild(b);
@@ -2850,6 +2969,8 @@ function pracPlayers(sess){
   if(sort === "num") ids.sort(function(a, b){ var x = parseInt((player(a) || {}).num, 10), y = parseInt((player(b) || {}).num, 10); return (isNaN(x) ? 999 : x) - (isNaN(y) ? 999 : y); });
   return ids;
 }
+// dragging sets Practice order, so it's offered when that's the order on screen and no search is narrowing it
+function canDragPractice(){ return !UI.pq && ((S.prefs && S.prefs.pracSort) || "practice") === "practice"; }
 function pracFinder(){
   var row = el("div",{cls:"finder"});
   var q = el("input",{type:"text",id:"pracFind",enterkeyhint:"search",placeholder:"Find a player: name or number",value:UI.pq || "","aria-label":"Find a player"});
@@ -2956,20 +3077,30 @@ function manageDrills(){
   det.appendChild(el("summary",{text:"Manage drills (" + activeDrillCount() + " of " + MAX_ACTIVE_DRILLS + " on)"}));
   det.appendChild(el("p",{cls:"sub",style:"margin:8px 0",
     text:"Switch on the drills you're working on. Switched-off drills stay saved, and you can turn them back on any time. Up to " + MAX_ACTIVE_DRILLS + " can be on at once."}));
+  var az = !!(S.prefs && S.prefs.drillAZ);
+  det.appendChild(el("p",{cls:"sub",style:"margin:0 0 8px",text: az ? "Drag ≡ on an area to move it. Drills are A to Z inside each area (switch A\u2013Z off above to drag them)."
+                                                               : "Drag ≡ to move a drill inside its area, or a whole area."}));
+  var areasBox = sortable(el("div",{}), "areas", "details.area", dropAreas);   // v4.16
   drillAreas(S.drills || []).forEach(function(area){
     var on = area.drills.filter(isOn).length;
-    var body = el("div",{cls:"chips",style:"margin:8px 0"});
+    var body = sortable(el("div",{cls:"chips",style:"margin:8px 0"}), "drills:" + area.name, ".chip", dropDrills);
     area.drills.forEach(function(d){
-      body.appendChild(el("button",{cls:"chip","aria-pressed": isOn(d) ? "true" : "false",
-        text: (isOn(d) ? "On · " : "Off · ") + d.name,
+      var chip = el("button",{cls:"chip","aria-pressed": isOn(d) ? "true" : "false", "data-sid": d.id,
         on:{click:function(){
           var was = isOn(d), r = setDrillOn(d, !was);
           if(r.error) toast(r.error); else toast(d.name + (was ? " off" : " on"));
           render();
-        }}}));
+        }}});
+      if(!az) chip.appendChild(dragHandle(d.name));
+      chip.appendChild(document.createTextNode((isOn(d) ? "On · " : "Off · ") + d.name));
+      body.appendChild(chip);
     });
-    det.appendChild(areaSection("manage:" + area.name, area.name + "  ·  " + on + " on (" + area.drills.length + ")", false, body));
+    var sec = areaSection("manage:" + area.name, area.name + "  ·  " + on + " on (" + area.drills.length + ")", false, body);
+    sec.setAttribute("data-sid", area.name);
+    var sum = sec.querySelector("summary"); sum.insertBefore(dragHandle(area.name), sum.firstChild);
+    areasBox.appendChild(sec);
   });
+  det.appendChild(areasBox);
   return det;
 }
 function levelChips(current, onPick){
@@ -3019,17 +3150,17 @@ function drillBatch(sess, d){
   wrap.appendChild(el("p",{cls:"sub",style:"margin:0 0 6px",
     text: (m === "rating" ? "Tap a level for each player" : "Enter each player's result" + (hint ? " (" + hint + ")" : "")) +
           ". Each one saves as you enter it; leave out anyone who didn't run it."}));
-  var list = el("div",{});
+  var list = sortable(el("div",{}), "batch", ".brow", function(ids){ dropPracticeOrder(sess, ids); });   // v4.16
   var fill = function(){ list.innerHTML = "";
     var shown = pracPlayers(sess);
     if(!shown.length) list.appendChild(el("div",{cls:"sub",text:"No player here matches “" + UI.pq + "”."}));
     shown.forEach(function(pid){
       var p = player(pid); if(!p) return;
       var row = rows[pid] || { val: "", note: "" }, mine = function(){ return rows[pid] || (rows[pid] = row); };
-      var line = el("div",{cls:"brow","data-pid":pid}), ctl = el("div",{cls:"bctl"});
+      var line = el("div",{cls:"brow","data-pid":pid,"data-sid":pid}), ctl = el("div",{cls:"bctl"});
       var status = el("span",{cls:"bstat"});
       var show = function(){ status.textContent = row.err ? row.err : row.aid ? "Saved" : row.wait ? "Note kept: add a result to save it" : ""; status.className = "bstat" + (row.err ? " err" : row.aid ? " ok" : ""); };
-      line.appendChild(el("div",{cls:"bname",text:p.name}));
+      line.appendChild(el("div",{cls:"bname"},[canDragPractice() ? dragHandle(p.name) : null, document.createTextNode(p.name)]));
       if(m === "rating") ctl.appendChild(levelChips(row.val, function(lab){ mine().val = lab; commitBatchRow(sess, d, pid); render(); }));
       else ctl.appendChild(valueInput(d, 0, row.val, function(v){ mine().val = v; commitBatchRow(sess, d, pid); show(); }));
       var note = el("input",{type:"text",cls:"bnote",placeholder:"Note",value:row.note || "","aria-label":"Note for " + p.name});
@@ -3771,7 +3902,9 @@ function viewPlayers(v){
         hd.appendChild(el("span",{cls:"pill",text:String(ps.length)}));
         v.appendChild(hd);
       }
-      ps.forEach(function(p){ v.appendChild(playerCard(p)); });
+      var group = sortable(el("div",{cls:"rostergrp"}), "roster:" + c.id, ".card", dropRoster);   // v4.16
+      ps.forEach(function(p){ group.appendChild(playerCard(p)); });
+      v.appendChild(group);
     });
   }
 
@@ -3780,7 +3913,8 @@ function viewPlayers(v){
   if(S.players.length) v.appendChild(deleteAllCard());
 }
 function playerCard(p){
-  var card = el("div",{cls:"card"});
+  var card = el("div",{cls:"card","data-sid":p.id});
+  card.appendChild(el("div",{cls:"pcard-h"},[dragHandle(p.name), el("span",{cls:"sub",text:"Drag to move"})]));
   var nmi = el("input",{type:"text",value:p.name,"aria-label":"Name"});
   nmi.addEventListener("input", function(){
     var r = cleanPlayerName(nmi.value);
@@ -3843,10 +3977,11 @@ function categoriesCard(counts){
   card.appendChild(el("label",{cls:"f",text:"Categories"}));
   card.appendChild(el("p",{cls:"sub",style:"margin:0 0 4px",
     text:"Every player is in exactly one. Removing a category moves its players to Miscellaneous."}));
+  sortable(card, "cats", ".catrow", dropCategories);   // v4.16
   catsSorted().forEach(function(c){
     var n = counts[c.id] || 0;
-    var row = el("div",{cls:"catrow"});
-    var nm = el("span",{cls:"cn"},[el("span",{cls:"cnt",text:c.name}), el("span",{cls:"pill",text:String(n)})]);
+    var row = el("div",{cls:"catrow","data-sid": c.misc ? null : c.id});
+    var nm = el("span",{cls:"cn"},[c.misc ? null : dragHandle(c.name), el("span",{cls:"cnt",text:c.name}), el("span",{cls:"pill",text:String(n)})]);
     row.appendChild(nm);
     if(!c.misc){
       row.appendChild(el("button",{cls:"btn sm",text:"Rename",on:{click:function(){ renameCategory(c); }}}));
@@ -4005,14 +4140,15 @@ function importNote(rep){
 /* ---------- stat catalog ---------- */
 function viewStats(v){
   v.appendChild(el("h2",{text:"Stats"}));
-  v.appendChild(el("p",{cls:"sub",text:"Switch a stat off to hide it from the bench and the tables — anything already recorded is kept."}));
+  v.appendChild(el("p",{cls:"sub",text:"Switch a stat off to hide it from the bench and the tables — anything already recorded is kept. Drag ≡ to change the order; game stats keep it as the tap grid's columns."}));
   var typeName = {}; TYPES.forEach(function(t){ typeName[t[0]] = t[1].split(" — ")[0]; });
   ["game","practice"].forEach(function(scope){
     v.appendChild(el("h3",{text: scope === "game" ? "In game" : "Practice"}));
-    var chips = el("div",{cls:"chips",style:"margin-bottom:12px"});
+    var chips = sortable(el("div",{cls:"chips",style:"margin-bottom:12px"}), "stats:" + scope, ".chip", dropStats);   // v4.16
     statsIn(scope, false).forEach(function(s){
-      var b = el("button",{cls:"chip","aria-pressed": s.on ? "true":"false",
+      var b = el("button",{cls:"chip","aria-pressed": s.on ? "true":"false", "data-sid": s.key,
         on:{click:function(){ s.on = !s.on; save(); render(); }}});
+      b.appendChild(dragHandle(s.label));
       b.appendChild(el("span",{cls:"ck",text: s.on ? "✓" : "+"}));
       b.appendChild(document.createTextNode(s.label));
       b.appendChild(el("span",{cls:"typetag",text: isTally(s) ? "tally" : (typeName[stType(s)] || "").toLowerCase()}));

@@ -5,7 +5,8 @@ A self-contained, offline-first web app for tracking player performance in pract
 ## Quick Start
 
 Open one of these links on your iPad:
-- **Latest (recommended):** https://raylin328.github.io/J17-Statbook/latest/ (currently v4.15)
+- **Latest (recommended):** https://raylin328.github.io/J17-Statbook/latest/ (currently v4.16)
+- **v4.16:** https://raylin328.github.io/J17-Statbook/v4.16/
 - **v4.15:** https://raylin328.github.io/J17-Statbook/v4.15/
 - **v4.14:** https://raylin328.github.io/J17-Statbook/v4.14/
 - **v4.13:** https://raylin328.github.io/J17-Statbook/v4.13/
@@ -63,7 +64,12 @@ version on this site shares the same saved data on that device.
 
 ## Versions
 
-### v4.15 (Current)
+### v4.16 (Current)
+- Drag to rearrange (≡ handle) everywhere you keep your own order: game grid rows and tiles (inside the court and inside the bench), practice players and the one-value drill list, drills inside an area and the areas, the roster inside each category, categories, and stats (the tap grid's columns follow)
+- Long lists scroll by themselves while you hold an item near the top or bottom edge
+- Tapping a handle never counts as tapping the item
+
+### v4.15
 - Opponents survive the spreadsheet files: Import CSVs reads opponents.csv (ids, teams, numbers, names), and never mistakes it for players.csv
 - sessions.csv keeps which opponent team each side was (`team1_opp`, `team2_opp`); older files link by team name
 

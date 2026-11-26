@@ -1,6 +1,6 @@
 # Stat Book tests
 
-1106 checks in 19 files. Needs Node 22 or later (jsdom 30). Each file loads the app in a simulated browser (jsdom)
+1,238 checks in 22 files. Needs Node 22 or later (jsdom 30). Each file loads the app in a simulated browser (jsdom)
 and drives it through its own functions and buttons.
 
 ## Run
@@ -35,6 +35,9 @@ node test-v46.js                           # one file
 | test-v412.js | 89 | free throw misses and the one-time upgrade, on-court players first, bench header, sticky header hooks, turnover and block spots, assist pairing, assist_for in the events CSV |
 | test-v4122.js | 65 | full court: the two coordinate frames and the mapping between them, the Full court switch in all three places, tap-to-spot on the lying-down court, chart views on full and half court, the court column in the events CSV |
 | test-v413.js | 155 | shot zones: which spot is which zone, the angle bands, distance and angle, left/right mirroring, the tally, the Zones tab (map, table, angles, dots, tap-to-name), games and filters, the zone in the toast and the log, the shots CSV, the link from the box score, the sticky-header rule |
+| test-v414.js | 63 | autosaved one-value list, drafts across drills and reloads, results CSV, find a player or drill, A–Z and jersey sorts, the Level type |
+| test-v415.js | 22 | opponents.csv read back (never as players.csv), the team link in sessions.csv |
+| test-v416.js | 46 | drag to rearrange: the order rules for every list, where the handles are and aren't, a handle tap isn't an item tap, redraws wait for a drag to end, the order is saved |
 | sample-data-test.js | 12 | a season in miniature, end to end |
 
 `fixtures/` holds a fictional 20-player roster and three older builds (v4, v4.1,
@@ -63,3 +66,16 @@ node browser-check.js        # needs Playwright with Chromium; it skips itself i
 
 It was added after v4.12 and v4.12.2 shipped a grid header that covered the third row of cells on a phone.
 The jsdom suite passed both times, because it can't see that. Run this whenever a change touches layout.
+
+## Drag checks
+
+`drag-check.js` is also separate from `npm test`. It drags every reorderable list in real Chromium at iPad
+landscape size, once with a mouse and once with a finger (44 checks): the game grid inside the court and
+inside the bench (and never across), tiles, practice players, the one-value drill list, areas, drills, the
+roster a long way down with the page scrolling, categories (Miscellaneous stays last) and stats. It also
+checks that a drag never selects, opens or switches anything, that the order survives a reload, and that no
+page scrolls sideways.
+
+```bash
+node drag-check.js           # needs Playwright with Chromium; it skips itself if Playwright is missing
+```
